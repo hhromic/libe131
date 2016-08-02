@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <err.h>
 #include <e131.h>
@@ -31,5 +32,6 @@ int main() {
       err(EXIT_FAILURE, "e131_send");
     e131_pkt_dump(&packet);
     packet.frame.sequence_number++;
+    sleep(1);
   }
 }
