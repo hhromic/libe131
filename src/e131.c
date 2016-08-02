@@ -124,6 +124,8 @@ int e131_pkt_init(const uint16_t universe, const uint16_t num_channels, e131_pac
   packet->dmp.type = 0xA1;
   packet->dmp.address_increment = htons(0x0001);
   packet->dmp.property_value_count = htons(num_channels + 1);
+
+  return 0;
 }
 
 /** Send an E1.31 packet to a socket file descriptor using a destination */
