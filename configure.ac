@@ -1,29 +1,39 @@
-# E1.31 (sACN) library for C/C++
-# Hugo Hromic - http://github.com/hhromic
-#
-# Copyright 2016 Hugo Hromic
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
 
-AC_INIT([libe131], [1.0], [hhromic@gmail.com])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_PREREQ([2.69])
+AC_INIT([libe131], [1.0.0], [hhromic@gmail.com])
+AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT
-AC_PROG_CC
+AC_CONFIG_SRCDIR([src/e131.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])
-AC_CONFIG_FILES([
- Makefile
- src/Makefile
- examples/Makefile
-])
+
+# Checks for programs.
+AC_PROG_CXX
+AC_PROG_AWK
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
+AC_PROG_RANLIB
+
+# Checks for libraries.
+
+# Checks for header files.
+AC_CHECK_HEADERS([arpa/inet.h inttypes.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/socket.h unistd.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT8_T
+
+# Checks for library functions.
+AC_CHECK_FUNCS([gethostbyname memset socket])
+
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
