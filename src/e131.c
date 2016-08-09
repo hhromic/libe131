@@ -188,7 +188,7 @@ int e131_pkt_dump(const e131_packet_t *packet) {
   for (size_t pos=0, total=sizeof packet->root.cid; pos<total; pos++)
     fprintf(stderr, "%02x", packet->root.cid[pos]);
   fprintf(stderr, "\n");
-  fprintf(stderr, "[Frame Layer]\n");
+  fprintf(stderr, "[Framing Layer]\n");
   fprintf(stderr, "  flength              : %" PRIu16 "\n", ntohs(packet->frame.flength));
   fprintf(stderr, "  vector               : %" PRIu32 "\n", ntohl(packet->frame.vector));
   fprintf(stderr, "  source_name          : %s\n", packet->frame.source_name);
@@ -197,7 +197,7 @@ int e131_pkt_dump(const e131_packet_t *packet) {
   fprintf(stderr, "  sequence_number      : %" PRIu8 "\n", packet->frame.sequence_number);
   fprintf(stderr, "  options              : %" PRIu8 "\n", packet->frame.options);
   fprintf(stderr, "  universe             : %" PRIu16 "\n", ntohs(packet->frame.universe));
-  fprintf(stderr, "[DMP Layer]\n");
+  fprintf(stderr, "[Device Management Protocol (DMP) Layer]\n");
   fprintf(stderr, "  flength              : %" PRIu16 "\n", ntohs(packet->dmp.flength));
   fprintf(stderr, "  vector               : %" PRIu8 "\n", packet->dmp.vector);
   fprintf(stderr, "  type                 : %" PRIu8 "\n", packet->dmp.type);
