@@ -26,9 +26,9 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <netdb.h>
-#include <e131.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include "e131.h"
 
 /* E1.31 Constants */
 const uint16_t E131_DEFAULT_PORT = 5568;
@@ -48,8 +48,8 @@ int e131_bind(int sockfd, const uint16_t port) {
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = INADDR_ANY;
   addr.sin_port = htons(port);
-  memset(addr.sin_zero, 0, sizeof(addr.sin_zero));
-  return bind(sockfd, (struct sockaddr *)&addr, sizeof(addr));
+  memset(addr.sin_zero, 0, sizeof addr.sin_zero);
+  return bind(sockfd, (struct sockaddr *)&addr, sizeof addr);
 }
 
 /** Initialize a unicast E1.31 destination using a host and port number */
@@ -66,7 +66,7 @@ int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest) 
   dest->sin_family = AF_INET;
   dest->sin_addr = *(struct in_addr *)he->h_addr;
   dest->sin_port = htons(port);
-  memset(dest->sin_zero, 0, sizeof(dest->sin_zero));
+  memset(dest->sin_zero, 0, sizeof dest->sin_zero);
   return 0;
 }
 
@@ -79,7 +79,7 @@ int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_
   dest->sin_family = AF_INET;
   dest->sin_addr.s_addr = htonl(0xefff0000 | universe);
   dest->sin_port = htons(port);
-  memset(dest->sin_zero, 0, sizeof(dest->sin_zero));
+  memset(dest->sin_zero, 0, sizeof dest->sin_zero);
   return 0;
 }
 
@@ -93,7 +93,7 @@ int e131_multicast_join(int sockfd, const uint16_t universe) {
   mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
   mreq.imr_address.s_addr = htonl(INADDR_ANY);
   mreq.imr_ifindex = 0;
-  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
 }
 
 /** Initialize a new E1.31 packet to default values */
@@ -103,27 +103,35 @@ int e131_pkt_init(const uint16_t universe, const uint16_t num_channels, e131_pac
     return -1;
   }
 
+  // compute packet layer lengths
+  uint16_t property_value_count = num_channels + 1;
+  uint16_t dmp_length = property_value_count +
+    sizeof packet->dmp - sizeof packet->dmp.property_values;
+  uint16_t frame_length = sizeof packet->frame + dmp_length;
+  uint16_t root_length = sizeof packet->root.flength +
+    sizeof packet->root.vector + sizeof packet->root.cid + frame_length;
+
   // clear packet
-  memset(packet, 0, sizeof(e131_packet_t));
+  memset(packet, 0, sizeof *packet);
 
   // set Root Layer values
   packet->root.preamble_size = htons(0x0010);
-  memcpy(packet->root.acn_id, E131_ACN_ID, sizeof(packet->root.acn_id));
-  packet->root.flength = htons(0x7000 | (num_channels + 1 + 10 + 77 + 22));
+  memcpy(packet->root.acn_id, E131_ACN_ID, sizeof packet->root.acn_id);
+  packet->root.flength = htons(0x7000 | root_length);
   packet->root.vector = htonl(E131_ROOT_VECTOR);
 
-  // set Frame Layer values
-  packet->frame.flength = htons(0x7000 | (num_channels + 1 + 10 + 77));
+  // set Framing Layer values
+  packet->frame.flength = htons(0x7000 | frame_length);
   packet->frame.vector = htonl(E131_FRAME_VECTOR);
   packet->frame.priority = 0x64;
   packet->frame.universe = htons(universe);
 
-  // set DMP layer values
-  packet->dmp.flength = htons(0x7000 | (num_channels + 1 + 10));
+  // set Device Management Protocol (DMP) Layer values
+  packet->dmp.flength = htons(0x7000 | dmp_length);
   packet->dmp.vector = E131_DMP_VECTOR;
   packet->dmp.type = 0xA1;
   packet->dmp.address_increment = htons(0x0001);
-  packet->dmp.property_value_count = htons(num_channels + 1);
+  packet->dmp.property_value_count = htons(property_value_count);
 
   return 0;
 }
@@ -134,10 +142,10 @@ ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *de
     errno = EINVAL;
     return -1;
   }
-  const size_t packet_length = sizeof(packet->raw) -
-    sizeof(packet->dmp.property_values) + htons(packet->dmp.property_value_count);
+  const size_t packet_length = sizeof packet->raw -
+    sizeof packet->dmp.property_values + htons(packet->dmp.property_value_count);
   return sendto(sockfd, packet->raw, packet_length, 0,
-    (const struct sockaddr *)dest, sizeof(e131_addr_t));
+    (const struct sockaddr *)dest, sizeof *dest);
 }
 
 /** Receive an E1.31 packet from a socket file descriptor */
@@ -146,14 +154,14 @@ ssize_t e131_recv(int sockfd, e131_packet_t *packet) {
     errno = EINVAL;
     return -1;
   }
-  return recv(sockfd, packet->raw, sizeof(packet->raw), 0);
+  return recv(sockfd, packet->raw, sizeof packet->raw, 0);
 }
 
 /** Validate correctness of an E1.31 packet */
 e131_error_t e131_pkt_validate(const e131_packet_t *packet) {
   if (packet == NULL)
     return E131_ERR_NULLPTR;
-  if (memcmp(packet->root.acn_id, E131_ACN_ID, sizeof(packet->root.acn_id)) != 0)
+  if (memcmp(packet->root.acn_id, E131_ACN_ID, sizeof packet->root.acn_id) != 0)
     return E131_ERR_ACN_ID;
   if (ntohl(packet->root.vector) != E131_ROOT_VECTOR)
     return E131_ERR_VECTOR_ROOT;
@@ -177,7 +185,7 @@ int e131_pkt_dump(const e131_packet_t *packet) {
   fprintf(stderr, "  flength              : %" PRIu16 "\n", ntohs(packet->root.flength));
   fprintf(stderr, "  vector               : %" PRIu32 "\n", ntohl(packet->root.vector));
   fprintf(stderr, "  cid                  : ");
-  for (size_t pos=0, total=sizeof(packet->root.cid); pos<total; pos++)
+  for (size_t pos=0, total=sizeof packet->root.cid; pos<total; pos++)
     fprintf(stderr, "%02x", packet->root.cid[pos]);
   fprintf(stderr, "\n");
   fprintf(stderr, "[Frame Layer]\n");

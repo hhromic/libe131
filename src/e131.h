@@ -41,7 +41,7 @@ typedef struct sockaddr_in e131_addr_t;
 /* E1.31 Packet Type */
 typedef union {
   struct {
-    struct { /* Root Layer */
+    struct { /* Root Layer: 38 bytes */
       uint16_t preamble_size;
       uint16_t postamble_size;
       uint8_t  acn_id[12];
@@ -50,7 +50,7 @@ typedef union {
       uint8_t  cid[16];
     } __attribute__((packed)) root;
 
-    struct { /* Frame Layer */
+    struct { /* Framing Layer: 77 bytes */
       uint16_t flength;
       uint32_t vector;
       uint8_t  source_name[64];
@@ -61,7 +61,7 @@ typedef union {
       uint16_t universe;
     } __attribute__((packed)) frame;
 
-    struct { /* DMP Layer */
+    struct { /* Device Management Protocol (DMP) Layer: 523 bytes */
       uint16_t flength;
       uint8_t  vector;
       uint8_t  type;
@@ -72,7 +72,7 @@ typedef union {
     } __attribute__((packed)) dmp;
   } __attribute__((packed));
 
-  uint8_t raw[638]; /* Raw buffer data */
+  uint8_t raw[638]; /* raw buffer: 638 bytes */
 } e131_packet_t;
 
 /* E1.31 Errors Type */
