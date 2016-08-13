@@ -32,7 +32,7 @@ Fortunately, most of the time you will not need to manipulate those fields direc
 
 The following is the data union provided by libE131 for sending/receiving E1.31 packets:
 
-```c
+```
 typedef union {
   struct {
     struct { /* ACN Root Layer: 38 bytes */
