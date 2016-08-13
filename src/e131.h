@@ -25,6 +25,7 @@
 #define _E131_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 
@@ -45,22 +46,23 @@ extern const uint16_t E131_DMP_ADDR_INC;
 typedef struct sockaddr_in e131_addr_t;
 
 /* E1.31 Packet Type */
+/* All packet contents shall be transmitted in network byte order (big endian). */
 typedef union {
   struct {
-    struct { /* Root Layer: 38 bytes */
+    struct { /* ACN Root Layer: 38 bytes */
       uint16_t preamble_size;    /* Preamble Size */
       uint16_t postamble_size;   /* Post-amble Size */
       uint8_t  acn_pid[12];      /* ACN Packet Identifier */
-      uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
-      uint32_t vector;           /* Protocol Vector */
-      uint8_t  cid[16];          /* Sender's Unique Client ID */
+      uint16_t flength;          /* Flags (high 4 bits) & Length (low 12 bits) */
+      uint32_t vector;           /* Layer Vector */
+      uint8_t  cid[16];          /* Component Identifier (UUID) */
     } __attribute__((packed)) root;
 
     struct { /* Framing Layer: 77 bytes */
-      uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
-      uint32_t vector;           /* Protocol Vector */
+      uint16_t flength;          /* Flags (high 4 bits) & Length (low 12 bits) */
+      uint32_t vector;           /* Layer Vector */
       uint8_t  source_name[64];  /* User Assigned Name of Source (UTF-8) */
-      uint8_t  priority;         /* Data Priority (0-200, default 100) */
+      uint8_t  priority;         /* Packet Priority (0-200, default 100) */
       uint16_t reserved;         /* Reserved (should be always 0) */
       uint8_t  seq_number;       /* Sequence Number (detect duplicates or out of order packets) */
       uint8_t  options;          /* Options Flags (bit 7: preview data, bit 6: stream terminated) */
@@ -69,12 +71,12 @@ typedef union {
 
     struct { /* Device Management Protocol (DMP) Layer: 523 bytes */
       uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
-      uint8_t  vector;           /* Protocol Vector */
+      uint8_t  vector;           /* Layer Vector */
       uint8_t  type;             /* Address Type & Data Type */
       uint16_t first_addr;       /* First Property Address */
       uint16_t addr_inc;         /* Address Increment */
-      uint16_t prop_value_cnt;   /* Property Value Count (1 + number of slots) */
-      uint8_t  prop_values[513]; /* Property Values (DMX start code + slots data) */
+      uint16_t prop_val_cnt;     /* Property Value Count (1 + number of slots) */
+      uint8_t  prop_val[513];    /* Property Values (DMX start code + slots data) */
     } __attribute__((packed)) dmp;
   } __attribute__((packed));
 
@@ -91,7 +93,9 @@ typedef enum {
   E131_ERR_VECTOR_ROOT,
   E131_ERR_VECTOR_FRAME,
   E131_ERR_VECTOR_DMP,
-  E131_ERR_TYPE_DMP
+  E131_ERR_TYPE_DMP,
+  E131_ERR_FIRST_ADDR_DMP,
+  E131_ERR_ADDR_INC_DMP
 } e131_error_t;
 
 /* Create a socket file descriptor suitable for E1.31 communication */
@@ -106,11 +110,23 @@ extern int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t 
 /* Initialize a multicast E1.31 destination using a universe and port number */
 extern int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_t *dest);
 
-/* Join a socket file descriptor to a E1.31 multicast group using a universe */
+/* Join a socket file descriptor to an E1.31 multicast group using a universe */
 extern int e131_multicast_join(int sockfd, const uint16_t universe);
 
 /* Initialize a new E1.31 packet using a number of slots */
 extern int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet);
+
+/* Check if the preview option is enabled in an E1.31 packet */
+extern bool e131_is_preview(const e131_packet_t *packet);
+
+/* Set the state of the preview option in an E1.31 packet */
+extern int e131_set_preview(e131_packet_t *packet, const bool state);
+
+/* Check if the stream terminated option is enabled in an E1.31 packet */
+extern bool e131_is_terminated(const e131_packet_t *packet);
+
+/* Set the state of the stream terminated option in an E1.31 packet */
+extern int e131_set_terminated(e131_packet_t *packet, const bool state);
 
 /* Send an E1.31 packet to a socket file descriptor using a destination */
 extern ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *dest);
@@ -120,6 +136,9 @@ extern ssize_t e131_recv(int sockfd, e131_packet_t *packet);
 
 /* Validate that an E1.31 packet is well-formed */
 extern e131_error_t e131_pkt_validate(const e131_packet_t *packet);
+
+/* Check if an E1.31 packet should be discarded (sequence number out of order) */
+extern bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq);
 
 /* Dump an E1.31 packet to the stderr output */
 extern int e131_pkt_dump(const e131_packet_t *packet);

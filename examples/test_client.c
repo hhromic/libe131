@@ -26,7 +26,7 @@ int main() {
   uint8_t level = 0;
   for (;;) {
     for (size_t pos=0; pos<24; pos++)
-      packet.dmp.prop_values[pos + 1] = level;
+      packet.dmp.prop_val[pos + 1] = level;
     level++;
     if (e131_send(sockfd, &packet, &dest)<0)
       err(EXIT_FAILURE, "e131_send");

@@ -43,12 +43,12 @@ const uint8_t E131_DMP_TYPE = 0xa1;
 const uint16_t E131_DMP_FIRST_ADDR = 0x0000;
 const uint16_t E131_DMP_ADDR_INC = 0x0001;
 
-/** Create a socket file descriptor suitable for E1.31 communication */
+/* Create a socket file descriptor suitable for E1.31 communication */
 int e131_socket(void) {
   return socket(PF_INET, SOCK_DGRAM, 0);
 }
 
-/** Bind a socket file descriptor to a port number for E1.31 communication */
+/* Bind a socket file descriptor to a port number for E1.31 communication */
 int e131_bind(int sockfd, const uint16_t port) {
   e131_addr_t addr;
   addr.sin_family = AF_INET;
@@ -58,7 +58,7 @@ int e131_bind(int sockfd, const uint16_t port) {
   return bind(sockfd, (struct sockaddr *)&addr, sizeof addr);
 }
 
-/** Initialize a unicast E1.31 destination using a host and port number */
+/* Initialize a unicast E1.31 destination using a host and port number */
 int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest) {
   if (host == NULL || dest == NULL) {
     errno = EINVAL;
@@ -76,7 +76,7 @@ int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest) 
   return 0;
 }
 
-/** Initialize a multicast E1.31 destination using a universe and port number */
+/* Initialize a multicast E1.31 destination using a universe and port number */
 int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_t *dest) {
   if (universe < 1 || universe > 63999 || dest == NULL) {
     errno = EINVAL;
@@ -89,7 +89,7 @@ int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_
   return 0;
 }
 
-/** Join a socket file descriptor to a E1.31 multicast group using a universe */
+/* Join a socket file descriptor to a E1.31 multicast group using a universe */
 int e131_multicast_join(int sockfd, const uint16_t universe) {
   if (universe < 1 || universe > 63999) {
     errno = EINVAL;
@@ -102,7 +102,7 @@ int e131_multicast_join(int sockfd, const uint16_t universe) {
   return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
 }
 
-/** Initialize a new E1.31 packet to default values */
+/* Initialize a new E1.31 packet to default values */
 int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet) {
   if (packet == NULL || universe < 1 || universe > 63999 || num_slots < 1 || num_slots > 512) {
     errno = EINVAL;
@@ -110,9 +110,9 @@ int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet
   }
 
   // compute packet layer lengths
-  uint16_t prop_value_cnt = num_slots + 1;
-  uint16_t dmp_length = prop_value_cnt +
-    sizeof packet->dmp - sizeof packet->dmp.prop_values;
+  uint16_t prop_val_cnt = num_slots + 1;
+  uint16_t dmp_length = prop_val_cnt +
+    sizeof packet->dmp - sizeof packet->dmp.prop_val;
   uint16_t frame_length = sizeof packet->frame + dmp_length;
   uint16_t root_length = sizeof packet->root.flength +
     sizeof packet->root.vector + sizeof packet->root.cid + frame_length;
@@ -139,24 +139,58 @@ int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet
   packet->dmp.type = E131_DMP_TYPE;
   packet->dmp.first_addr = htons(E131_DMP_FIRST_ADDR);
   packet->dmp.addr_inc = htons(E131_DMP_ADDR_INC);
-  packet->dmp.prop_value_cnt = htons(prop_value_cnt);
+  packet->dmp.prop_val_cnt = htons(prop_val_cnt);
 
   return 0;
 }
 
-/** Send an E1.31 packet to a socket file descriptor using a destination */
+/* Check if the preview option is enabled in an E1.31 packet */
+bool e131_is_preview(const e131_packet_t *packet) {
+  if (packet == NULL || packet->frame.options & (1 << 7))
+    return false;
+  return true;
+}
+
+/* Set the state of the preview option in an E1.31 packet */
+int e131_set_preview(e131_packet_t *packet, const bool state) {
+  if (packet == NULL) {
+    errno = EINVAL;
+    return -1;
+  }
+  packet->frame.options |= (1 << 7);
+  return 0;
+}
+
+/* Check if the stream terminated option is enabled in an E1.31 packet */
+bool e131_is_terminated(const e131_packet_t *packet) {
+  if (packet == NULL || packet->frame.options & (1 << 6))
+    return false;
+  return true;
+}
+
+/* Set the state of the stream terminated option in an E1.31 packet */
+int e131_set_terminated(e131_packet_t *packet, const bool state) {
+  if (packet == NULL) {
+    errno = EINVAL;
+    return -1;
+  }
+  packet->frame.options |= (1 << 6);
+  return 0;
+}
+
+/* Send an E1.31 packet to a socket file descriptor using a destination */
 ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *dest) {
   if (packet == NULL || dest == NULL) {
     errno = EINVAL;
     return -1;
   }
   const size_t packet_length = sizeof packet->raw -
-    sizeof packet->dmp.prop_values + htons(packet->dmp.prop_value_cnt);
+    sizeof packet->dmp.prop_val + htons(packet->dmp.prop_val_cnt);
   return sendto(sockfd, packet->raw, packet_length, 0,
     (const struct sockaddr *)dest, sizeof *dest);
 }
 
-/** Receive an E1.31 packet from a socket file descriptor */
+/* Receive an E1.31 packet from a socket file descriptor */
 ssize_t e131_recv(int sockfd, e131_packet_t *packet) {
   if (packet == NULL) {
     errno = EINVAL;
@@ -165,7 +199,7 @@ ssize_t e131_recv(int sockfd, e131_packet_t *packet) {
   return recv(sockfd, packet->raw, sizeof packet->raw, 0);
 }
 
-/** Validate correctness of an E1.31 packet */
+/* Validate correctness of an E1.31 packet */
 e131_error_t e131_pkt_validate(const e131_packet_t *packet) {
   if (packet == NULL)
     return E131_ERR_NULLPTR;
@@ -183,50 +217,64 @@ e131_error_t e131_pkt_validate(const e131_packet_t *packet) {
     return E131_ERR_VECTOR_DMP;
   if (packet->dmp.type != E131_DMP_TYPE)
     return E131_ERR_TYPE_DMP;
+  if (htons(packet->dmp.first_addr) != E131_DMP_FIRST_ADDR)
+    return E131_ERR_FIRST_ADDR_DMP;
+  if (htons(packet->dmp.addr_inc) != E131_DMP_ADDR_INC)
+    return E131_ERR_ADDR_INC_DMP;
   return E131_ERR_NONE;
 }
 
-/** Dump an E1.31 packet to the stderr output */
+/* Check if an E1.31 packet should be discarded (sequence number out of order) */
+bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq) {
+  if (packet == NULL)
+    return true;
+  int8_t seq_diff = packet->frame.seq_number - last_seq;
+  if (seq_diff > -20 && seq_diff <= 0)
+    return true;
+  return false;
+}
+
+/* Dump an E1.31 packet to the stderr output */
 int e131_pkt_dump(const e131_packet_t *packet) {
   if (packet == NULL) {
     errno = EINVAL;
     return -1;
   }
   fprintf(stderr, "[Root Layer]\n");
-  fprintf(stderr, "  Preamble Size        : %" PRIu16 "\n", ntohs(packet->root.preamble_size));
-  fprintf(stderr, "  Post-amble Size      : %" PRIu16 "\n", ntohs(packet->root.postamble_size));
-  fprintf(stderr, "  ACN Identifier       : %s\n", packet->root.acn_pid);
-  fprintf(stderr, "  Flags & Length       : %" PRIu16 "\n", ntohs(packet->root.flength));
-  fprintf(stderr, "  Vector               : %" PRIu32 "\n", ntohl(packet->root.vector));
-  fprintf(stderr, "  CID                  : ");
+  fprintf(stderr, "  Preamble Size ......... %" PRIu16 "\n", ntohs(packet->root.preamble_size));
+  fprintf(stderr, "  Post-amble Size ....... %" PRIu16 "\n", ntohs(packet->root.postamble_size));
+  fprintf(stderr, "  ACN Identifier ........ %s\n", packet->root.acn_pid);
+  fprintf(stderr, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->root.flength));
+  fprintf(stderr, "  Layer Vector .......... %" PRIu32 "\n", ntohl(packet->root.vector));
+  fprintf(stderr, "  Component Identifier .. ");
   for (size_t pos=0, total=sizeof packet->root.cid; pos<total; pos++)
     fprintf(stderr, "%02x", packet->root.cid[pos]);
   fprintf(stderr, "\n");
   fprintf(stderr, "[Framing Layer]\n");
-  fprintf(stderr, "  Flags & Length       : %" PRIu16 "\n", ntohs(packet->frame.flength));
-  fprintf(stderr, "  Vector               : %" PRIu32 "\n", ntohl(packet->frame.vector));
-  fprintf(stderr, "  Source Name          : %s\n", packet->frame.source_name);
-  fprintf(stderr, "  Priority             : %" PRIu8 "\n", packet->frame.priority);
-  fprintf(stderr, "  Reserved             : %" PRIu16 "\n", ntohs(packet->frame.reserved));
-  fprintf(stderr, "  Sequence Number      : %" PRIu8 "\n", packet->frame.seq_number);
-  fprintf(stderr, "  Options              : %" PRIu8 "\n", packet->frame.options);
-  fprintf(stderr, "  Universe Number      : %" PRIu16 "\n", ntohs(packet->frame.universe));
+  fprintf(stderr, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->frame.flength));
+  fprintf(stderr, "  Layer Vector .......... %" PRIu32 "\n", ntohl(packet->frame.vector));
+  fprintf(stderr, "  Source Name ........... %s\n", packet->frame.source_name);
+  fprintf(stderr, "  Packet Priority ....... %" PRIu8 "\n", packet->frame.priority);
+  fprintf(stderr, "  Reserved .............. %" PRIu16 "\n", ntohs(packet->frame.reserved));
+  fprintf(stderr, "  Sequence Number ....... %" PRIu8 "\n", packet->frame.seq_number);
+  fprintf(stderr, "  Options Flags ......... %" PRIu8 "\n", packet->frame.options);
+  fprintf(stderr, "  DMX Universe Number ... %" PRIu16 "\n", ntohs(packet->frame.universe));
   fprintf(stderr, "[Device Management Protocol (DMP) Layer]\n");
-  fprintf(stderr, "  Flags & Length       : %" PRIu16 "\n", ntohs(packet->dmp.flength));
-  fprintf(stderr, "  Vector               : %" PRIu8 "\n", packet->dmp.vector);
-  fprintf(stderr, "  Address & Data Type  : %" PRIu8 "\n", packet->dmp.type);
-  fprintf(stderr, "  First Address        : %" PRIu16 "\n", ntohs(packet->dmp.first_addr));
-  fprintf(stderr, "  Address Increment    : %" PRIu16 "\n", ntohs(packet->dmp.addr_inc));
-  fprintf(stderr, "  Property Value Count : %" PRIu16 "\n", ntohs(packet->dmp.prop_value_cnt));
-  fprintf(stderr, "  Property Values      :");
-  for (size_t pos=0, total=ntohs(packet->dmp.prop_value_cnt); pos<total; pos++)
-    fprintf(stderr, " %02x", packet->dmp.prop_values[pos]);
+  fprintf(stderr, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->dmp.flength));
+  fprintf(stderr, "  Layer Vector .......... %" PRIu8 "\n", packet->dmp.vector);
+  fprintf(stderr, "  Address & Data Type ... %" PRIu8 "\n", packet->dmp.type);
+  fprintf(stderr, "  First Address ......... %" PRIu16 "\n", ntohs(packet->dmp.first_addr));
+  fprintf(stderr, "  Address Increment ..... %" PRIu16 "\n", ntohs(packet->dmp.addr_inc));
+  fprintf(stderr, "  Property Value Count .. %" PRIu16 "\n", ntohs(packet->dmp.prop_val_cnt));
+  fprintf(stderr, "[DMP Property Values]\n ");
+  for (size_t pos=0, total=ntohs(packet->dmp.prop_val_cnt); pos<total; pos++)
+    fprintf(stderr, " %02x", packet->dmp.prop_val[pos]);
   fprintf(stderr, "\n");
   return 0;
 }
 
 /* Return a string describing an E1.31 error */
-extern const char *e131_strerror(const e131_error_t error) {
+const char *e131_strerror(const e131_error_t error) {
   switch (error) {
     case E131_ERR_NONE:
       return "Success";
@@ -244,6 +292,10 @@ extern const char *e131_strerror(const e131_error_t error) {
       return "Invalid Device Management Protocol (DMP) Layer Vector";
     case E131_ERR_TYPE_DMP:
       return "Invalid DMP Address & Data Type";
+    case E131_ERR_FIRST_ADDR_DMP:
+      return "Invalid DMP First Address";
+    case E131_ERR_ADDR_INC_DMP:
+      return "Invalid DMP Address Increment";
     default:
       return "Unknown error";
   }
