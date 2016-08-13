@@ -1,6 +1,6 @@
 # libE131: a lightweight C/C++ library for the E1.31 (sACN) protocol
 
-A lightweight C/C++ library that provides a simple API for packet, client and server programming to be used for communicating with devices implementing the E1.31 (sACN) protocol. A lot of information about E.131 (sACN) can be found on this [Wiki article][e131], from which most informational content about E1.31 in this document comes from.
+This is a lightweight C/C++ library that provides a simple API for packet, client and server programming to be used for communicating with devices implementing the E1.31 (sACN) protocol. Detailed information about E.131 (sACN) can be found on this [Wiki article][e131], from which most informational content about E1.31 in this document comes from.
 
 ACN is a suite of protocols (via Ethernet) that is the industry standard for lighting and control. ESTA, the creator of the standard, ratified a subset of this protocol for "lightweight" devices which is called sACN (E1.31). This lightweight version allows microcontroller based lighting equipment to communicate via ethernet, without all the overhead of the full ACN protocol.
 
@@ -10,60 +10,93 @@ The simplest way to think about E1.31 is that it is a way to transport a large n
 
 ## Installation
 
+To install libE131 in your system, use the standard autotools approach:
+
+    $ ./configure --prefix=/usr
+    $ make
+    $ sudo make install
+
+The last step requires `root` privileges. You can uninstall the library using:
+
+    $ sudo make uninstall
+
 ## E1.31 (sACN) Packets
 
-E1.31 Packet = Root Layer + Frame Layer + DMP (Device Management Protocol) Layer
+E1.31 network packets are based on ACN and are composed of three layers:
+
+    E1.31 Packet = ACN Root Layer + Framing Layer + Device Management Protocol (DMP) Layer
+
+All packet contents are transmitted in **network byte order (big endian)**. If you are accessing fields larger than one byte, you must read/write from/to them using the `ntohs`, `ntohl`, `htons` and `htonl` conversion functions.
+
+Fortunately, most of the time you will not need to manipulate those fields directly because libE131 provides convenience functions for the most common fields. See the API documentation section for more information.
+
+The following is the data union provided by libE131 for sending/receiving E1.31 packets:
 
 ```c
 typedef union {
   struct {
-    struct { /* Root Layer */
-      uint16_t preamble_size;
-      uint16_t postamble_size;
-      uint8_t  acn_id[12];
-      uint16_t flength;
-      uint32_t vector;
-      uint8_t  cid[16];
+    struct { /* ACN Root Layer: 38 bytes */
+      uint16_t preamble_size;    /* Preamble Size */
+      uint16_t postamble_size;   /* Post-amble Size */
+      uint8_t  acn_pid[12];      /* ACN Packet Identifier */
+      uint16_t flength;          /* Flags (high 4 bits) & Length (low 12 bits) */
+      uint32_t vector;           /* Layer Vector */
+      uint8_t  cid[16];          /* Component Identifier (UUID) */
     } __attribute__((packed)) root;
 
-    struct { /* Frame Layer */
-      uint16_t flength;
-      uint32_t vector;
-      uint8_t  source_name[64];
-      uint8_t  priority;
-      uint16_t reserved;
-      uint8_t  sequence_number;
-      uint8_t  options;
-      uint16_t universe;
+    struct { /* Framing Layer: 77 bytes */
+      uint16_t flength;          /* Flags (high 4 bits) & Length (low 12 bits) */
+      uint32_t vector;           /* Layer Vector */
+      uint8_t  source_name[64];  /* User Assigned Name of Source (UTF-8) */
+      uint8_t  priority;         /* Packet Priority (0-200, default 100) */
+      uint16_t reserved;         /* Reserved (should be always 0) */
+      uint8_t  seq_number;       /* Sequence Number (detect duplicates or out of order packets) */
+      uint8_t  options;          /* Options Flags (bit 7: preview data, bit 6: stream terminated) */
+      uint16_t universe;         /* DMX Universe Number */
     } __attribute__((packed)) frame;
 
-    struct { /* DMP Layer */
-      uint16_t flength;
-      uint8_t  vector;
-      uint8_t  type;
-      uint16_t first_address;
-      uint16_t address_increment;
-      uint16_t property_value_count;
-      uint8_t  property_values[513];
+    struct { /* Device Management Protocol (DMP) Layer: 523 bytes */
+      uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
+      uint8_t  vector;           /* Layer Vector */
+      uint8_t  type;             /* Address Type & Data Type */
+      uint16_t first_addr;       /* First Property Address */
+      uint16_t addr_inc;         /* Address Increment */
+      uint16_t prop_val_cnt;     /* Property Value Count (1 + number of slots) */
+      uint8_t  prop_val[513];    /* Property Values (DMX start code + slots data) */
     } __attribute__((packed)) dmp;
   } __attribute__((packed));
 
-  uint8_t raw[638]; /* Raw buffer data */
+  uint8_t raw[638]; /* raw buffer view: 638 bytes */
 } e131_packet_t;
 ```
 
+This union provides two ways to access the data of an E1.31 packet:
+
+1. directly using the `raw` member (typically used for receiving data from the network)
+2. structurally using the `root`, `frame` and `dmp` members (typically for processing a packet)
+
+You can easily create and initialize a new E1.31 packet to be used for sending using the `e131_pkt_init()` function.
+
+See the examples sections to see how this data structure is used with libE131.
+
 ### Packet Validation
 
-```c
-typedef enum {
-  E131_ERR_NONE,
-  E131_ERR_NULLPTR,
-  E131_ERR_ACN_ID,
-  E131_ERR_VECTOR_ROOT,
-  E131_ERR_VECTOR_FRAME,
-  E131_ERR_VECTOR_DMP
-} e131_error_t;
-```
+The library provides a convenience function, `e131_pkt_validate()`, to check if an E1.31 packet is valid to be processed by your application. This function returns a validation status from the `e131_error_t` enumeration. The following is a description of each available error constant:
+
+* `E131_ERR_NONE`: Success (no validation error detected, you can process the packet).
+* `E131_ERR_PREAMBLE_SIZE`: Invalid Preamble Size.
+* `E131_ERR_POSTAMBLE_SIZE`: Invalid Post-amble Size.
+* `E131_ERR_ACN_PID`: Invalid ACN Packet Identifier.
+* `E131_ERR_VECTOR_ROOT`: Invalid Root Layer Vector.
+* `E131_ERR_VECTOR_FRAME`: Invalid Framing Layer Vector.
+* `E131_ERR_VECTOR_DMP`: Invalid Device Management Protocol (DMP) Layer Vector.
+* `E131_ERR_TYPE_DMP`: Invalid DMP Address & Data Type.
+* `E131_ERR_FIRST_ADDR_DMP`: Invalid DMP First Address.
+* `E131_ERR_ADDR_INC_DMP`: Invalid DMP Address Increment.
+
+The above error descriptions are also programatically obtainable using the `e131_strerror()` function. See the API documentation section for more information.
+
+See the examples sections to see how the packet validation and error reporting functions are used with libE131.
 
 ## Unicast and Multicast Destinations
 
@@ -104,38 +137,82 @@ E1.31 transports lighting information in "Universes", which is a collection of u
 
 ## libE131 API Documentation
 
-```c
-/** Create a socket file descriptor suitable for E1.31 communication */
-int e131_socket(void);
+### Public Library Constants
 
-/** Bind a socket file descriptor to a port number for E1.31 communication */
-int e131_bind(int sockfd, const uint16_t port);
+* *const uint16_t* `E131_DEFAULT_PORT`: default network port for E1.31 UDP data (5568).
+* *const uint8_t* `E131_DEFAULT_PRIORITY`: default E1.31 packet priority (100).
 
-/** Initialize a unicast E1.31 destination using a host and port number */
-int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest);
+### Public Library Functions
 
-/** Initialize a multicast E1.31 destination using a universe and port number */
-int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_t *dest);
+The library provides a number of functions to help you develop clients and servers that communicate using the E1.31 protocol. The following is a descriptive list of all functions provided.
 
-/** Join a socket file descriptor to a E1.31 multicast group using a universe */
-int e131_multicast_join(int sockfd, const uint16_t universe);
+See the examples sections to see how the most common API functions are used with libE131.
 
-/** Initialize a new E1.31 packet using a number of channels */
-int e131_pkt_init(const uint16_t universe, const uint16_t num_channels, e131_packet_t *packet);
+* `int e131_socket(void)`: Create a socket file descriptor suitable for E1.31 communication. On success, a file descriptor for the new socket is returned. On error, -1 is returned, and `errno` is set appropriately.
 
-/** Send an E1.31 packet to a socket file descriptor using a destination */
-ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *dest);
+* `int e131_bind(int sockfd, const uint16_t port)`: Bind a socket file descriptor to a port number for E1.31 communication. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
 
-/** Receive an E1.31 packet from a socket file descriptor */
-ssize_t e131_recv(int sockfd, e131_packet_t *packet);
+* `int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest)`: Initialize a unicast E1.31 destination using a host and port number.  On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
 
-/** Validate that an E1.31 packet is well-formed */
-e131_error_t e131_pkt_validate(const e131_packet_t *packet);
+* `int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_t *dest)`: Initialize a multicast E1.31 destination using a universe and port number. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
 
-/** Dump an E1.31 packet to the stderr output */
-int e131_pkt_dump(const e131_packet_t *packet);
-```
+* `int e131_multicast_join(int sockfd, const uint16_t universe)`: Join a socket file descriptor to an E1.31 multicast group using a universe. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+
+* `int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet)`:  Initialize a new E1.31 packet using a universe and a number of slots. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+
+* `bool e131_is_preview(const e131_packet_t *packet)`: Check if the preview option is enabled in an E1.31 packet.
+
+* `int e131_set_preview(e131_packet_t *packet, const bool state)`: Set the state of the preview option in an E1.31 packet. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+
+* `bool e131_is_terminated(const e131_packet_t *packet)`: Check if the stream terminated option is enabled in an E1.31 packet.
+
+* `int e131_set_terminated(e131_packet_t *packet, const bool state)`: Set the state of the stream terminated option in an E1.31 packet. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+
+* `ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *dest)`: Send an E1.31 packet to a socket file descriptor using a destination. On success, the number of bytes sent is returned. On error, -1 is returned, and `errno` is set appropriately.
+
+* `ssize_t e131_recv(int sockfd, e131_packet_t *packet)`: Receive an E1.31 packet from a socket file descriptor. This function returns the number of bytes received, or -1 if an error occurred. In the event of an error, `errno` is set to indicate the error.
+
+* `e131_error_t e131_pkt_validate(const e131_packet_t *packet)`: Validate that an E1.31 packet is well-formed. See the Packet Validation section.
+
+* `bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq_number)`: Check if an E1.31 packet should be discarded (sequence number out of order). This function uses the standard out-of-sequence detection algorithm defined in the E1.31 specification.
+
+* `int e131_pkt_dump(const e131_packet_t *packet)`: Dump an E1.31 packet to the stderr output. The output is formatted for human readable output.
+
+* `const char *e131_strerror(const e131_error_t error)`: Return a string describing an E1.31 error.
 
 ## Example: Creating a Client
 
+Included in this repository is an example to create a simple E1.31 client (`examples/test_client.c`). Compile it using:
+
+    gcc -le131 -Wall test_client.c -o test_client
+
 ## Example: Creating a Server
+
+Included in this repository is an example to create a simple E1.31 server (`examples/test_server.c`). Compile it using:
+
+    gcc -le131 -Wall test_server.c -o test_server
+
+## Example Projects using libE131
+
+* E1.31 Console Viewer
+* E1.31 to AdaLight Bridge
+* E1.31 to MQTT Bridge
+* MIDI to E1.31 Synthesizer
+
+Also check out the Node.js port of libE131.
+
+## License
+
+This software is under the **Apache License 2.0**.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
