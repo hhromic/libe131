@@ -194,12 +194,14 @@ Included in this repository is an example to create a simple E1.31 server (`exam
 
 ## Example Projects using libE131
 
-* E1.31 Console Viewer
+* E1.31 Xterm256 Console Viewer
 * E1.31 to AdaLight Bridge
 * E1.31 to MQTT Bridge
 * MIDI to E1.31 Synthesizer
 
-Also check out the Node.js port of libE131.
+Also check out the [Node.js port][e131-node] of libE131.
+
+[e131-node]: https://github.com/hhromic/e131-node
 
 ## License
 
