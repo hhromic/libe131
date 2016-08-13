@@ -32,10 +32,16 @@
 
 /* E1.31 Constants */
 const uint16_t E131_DEFAULT_PORT = 5568;
-const uint8_t E131_ACN_ID[] = {0x41, 0x53, 0x43, 0x2d, 0x45, 0x31, 0x2e, 0x31, 0x37, 0x00, 0x00, 0x00};
+const uint8_t E131_DEFAULT_PRIORITY = 0x64;
+const uint16_t E131_PREAMBLE_SIZE = 0x0010;
+const uint16_t E131_POSTAMBLE_SIZE = 0x0000;
+const uint8_t E131_ACN_PID[] = {0x41, 0x53, 0x43, 0x2d, 0x45, 0x31, 0x2e, 0x31, 0x37, 0x00, 0x00, 0x00};
 const uint32_t E131_ROOT_VECTOR = 0x00000004;
 const uint32_t E131_FRAME_VECTOR = 0x00000002;
 const uint8_t E131_DMP_VECTOR = 0x02;
+const uint8_t E131_DMP_TYPE = 0xa1;
+const uint16_t E131_DMP_FIRST_ADDR = 0x0000;
+const uint16_t E131_DMP_ADDR_INC = 0x0001;
 
 /** Create a socket file descriptor suitable for E1.31 communication */
 int e131_socket(void) {
@@ -97,16 +103,16 @@ int e131_multicast_join(int sockfd, const uint16_t universe) {
 }
 
 /** Initialize a new E1.31 packet to default values */
-int e131_pkt_init(const uint16_t universe, const uint16_t num_channels, e131_packet_t *packet) {
-  if (packet == NULL || universe < 1 || universe > 63999 || num_channels < 1 || num_channels > 512) {
+int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet) {
+  if (packet == NULL || universe < 1 || universe > 63999 || num_slots < 1 || num_slots > 512) {
     errno = EINVAL;
     return -1;
   }
 
   // compute packet layer lengths
-  uint16_t property_value_count = num_channels + 1;
-  uint16_t dmp_length = property_value_count +
-    sizeof packet->dmp - sizeof packet->dmp.property_values;
+  uint16_t prop_value_cnt = num_slots + 1;
+  uint16_t dmp_length = prop_value_cnt +
+    sizeof packet->dmp - sizeof packet->dmp.prop_values;
   uint16_t frame_length = sizeof packet->frame + dmp_length;
   uint16_t root_length = sizeof packet->root.flength +
     sizeof packet->root.vector + sizeof packet->root.cid + frame_length;
@@ -115,23 +121,25 @@ int e131_pkt_init(const uint16_t universe, const uint16_t num_channels, e131_pac
   memset(packet, 0, sizeof *packet);
 
   // set Root Layer values
-  packet->root.preamble_size = htons(0x0010);
-  memcpy(packet->root.acn_id, E131_ACN_ID, sizeof packet->root.acn_id);
+  packet->root.preamble_size = htons(E131_PREAMBLE_SIZE);
+  packet->root.postamble_size = htons(E131_POSTAMBLE_SIZE);
+  memcpy(packet->root.acn_pid, E131_ACN_PID, sizeof packet->root.acn_pid);
   packet->root.flength = htons(0x7000 | root_length);
   packet->root.vector = htonl(E131_ROOT_VECTOR);
 
   // set Framing Layer values
   packet->frame.flength = htons(0x7000 | frame_length);
   packet->frame.vector = htonl(E131_FRAME_VECTOR);
-  packet->frame.priority = 0x64;
+  packet->frame.priority = E131_DEFAULT_PRIORITY;
   packet->frame.universe = htons(universe);
 
   // set Device Management Protocol (DMP) Layer values
   packet->dmp.flength = htons(0x7000 | dmp_length);
   packet->dmp.vector = E131_DMP_VECTOR;
-  packet->dmp.type = 0xA1;
-  packet->dmp.address_increment = htons(0x0001);
-  packet->dmp.property_value_count = htons(property_value_count);
+  packet->dmp.type = E131_DMP_TYPE;
+  packet->dmp.first_addr = htons(E131_DMP_FIRST_ADDR);
+  packet->dmp.addr_inc = htons(E131_DMP_ADDR_INC);
+  packet->dmp.prop_value_cnt = htons(prop_value_cnt);
 
   return 0;
 }
@@ -143,7 +151,7 @@ ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *de
     return -1;
   }
   const size_t packet_length = sizeof packet->raw -
-    sizeof packet->dmp.property_values + htons(packet->dmp.property_value_count);
+    sizeof packet->dmp.prop_values + htons(packet->dmp.prop_value_cnt);
   return sendto(sockfd, packet->raw, packet_length, 0,
     (const struct sockaddr *)dest, sizeof *dest);
 }
@@ -161,14 +169,20 @@ ssize_t e131_recv(int sockfd, e131_packet_t *packet) {
 e131_error_t e131_pkt_validate(const e131_packet_t *packet) {
   if (packet == NULL)
     return E131_ERR_NULLPTR;
-  if (memcmp(packet->root.acn_id, E131_ACN_ID, sizeof packet->root.acn_id) != 0)
-    return E131_ERR_ACN_ID;
+  if (ntohs(packet->root.preamble_size) != E131_PREAMBLE_SIZE)
+    return E131_ERR_PREAMBLE_SIZE;
+  if (ntohs(packet->root.postamble_size) != E131_POSTAMBLE_SIZE)
+    return E131_ERR_POSTAMBLE_SIZE;
+  if (memcmp(packet->root.acn_pid, E131_ACN_PID, sizeof packet->root.acn_pid) != 0)
+    return E131_ERR_ACN_PID;
   if (ntohl(packet->root.vector) != E131_ROOT_VECTOR)
     return E131_ERR_VECTOR_ROOT;
   if (ntohl(packet->frame.vector) != E131_FRAME_VECTOR)
     return E131_ERR_VECTOR_FRAME;
   if (packet->dmp.vector != E131_DMP_VECTOR)
     return E131_ERR_VECTOR_DMP;
+  if (packet->dmp.type != E131_DMP_TYPE)
+    return E131_ERR_TYPE_DMP;
   return E131_ERR_NONE;
 }
 
@@ -179,34 +193,58 @@ int e131_pkt_dump(const e131_packet_t *packet) {
     return -1;
   }
   fprintf(stderr, "[Root Layer]\n");
-  fprintf(stderr, "  preamble_size        : %" PRIu16 "\n", ntohs(packet->root.preamble_size));
-  fprintf(stderr, "  postamble_size       : %" PRIu16 "\n", ntohs(packet->root.postamble_size));
-  fprintf(stderr, "  acn_id               : %s\n", packet->root.acn_id);
-  fprintf(stderr, "  flength              : %" PRIu16 "\n", ntohs(packet->root.flength));
-  fprintf(stderr, "  vector               : %" PRIu32 "\n", ntohl(packet->root.vector));
-  fprintf(stderr, "  cid                  : ");
+  fprintf(stderr, "  Preamble Size        : %" PRIu16 "\n", ntohs(packet->root.preamble_size));
+  fprintf(stderr, "  Post-amble Size      : %" PRIu16 "\n", ntohs(packet->root.postamble_size));
+  fprintf(stderr, "  ACN Identifier       : %s\n", packet->root.acn_pid);
+  fprintf(stderr, "  Flags & Length       : %" PRIu16 "\n", ntohs(packet->root.flength));
+  fprintf(stderr, "  Vector               : %" PRIu32 "\n", ntohl(packet->root.vector));
+  fprintf(stderr, "  CID                  : ");
   for (size_t pos=0, total=sizeof packet->root.cid; pos<total; pos++)
     fprintf(stderr, "%02x", packet->root.cid[pos]);
   fprintf(stderr, "\n");
   fprintf(stderr, "[Framing Layer]\n");
-  fprintf(stderr, "  flength              : %" PRIu16 "\n", ntohs(packet->frame.flength));
-  fprintf(stderr, "  vector               : %" PRIu32 "\n", ntohl(packet->frame.vector));
-  fprintf(stderr, "  source_name          : %s\n", packet->frame.source_name);
-  fprintf(stderr, "  priority             : %" PRIu8 "\n", packet->frame.priority);
-  fprintf(stderr, "  reserved             : %" PRIu16 "\n", ntohs(packet->frame.reserved));
-  fprintf(stderr, "  sequence_number      : %" PRIu8 "\n", packet->frame.sequence_number);
-  fprintf(stderr, "  options              : %" PRIu8 "\n", packet->frame.options);
-  fprintf(stderr, "  universe             : %" PRIu16 "\n", ntohs(packet->frame.universe));
+  fprintf(stderr, "  Flags & Length       : %" PRIu16 "\n", ntohs(packet->frame.flength));
+  fprintf(stderr, "  Vector               : %" PRIu32 "\n", ntohl(packet->frame.vector));
+  fprintf(stderr, "  Source Name          : %s\n", packet->frame.source_name);
+  fprintf(stderr, "  Priority             : %" PRIu8 "\n", packet->frame.priority);
+  fprintf(stderr, "  Reserved             : %" PRIu16 "\n", ntohs(packet->frame.reserved));
+  fprintf(stderr, "  Sequence Number      : %" PRIu8 "\n", packet->frame.seq_number);
+  fprintf(stderr, "  Options              : %" PRIu8 "\n", packet->frame.options);
+  fprintf(stderr, "  Universe Number      : %" PRIu16 "\n", ntohs(packet->frame.universe));
   fprintf(stderr, "[Device Management Protocol (DMP) Layer]\n");
-  fprintf(stderr, "  flength              : %" PRIu16 "\n", ntohs(packet->dmp.flength));
-  fprintf(stderr, "  vector               : %" PRIu8 "\n", packet->dmp.vector);
-  fprintf(stderr, "  type                 : %" PRIu8 "\n", packet->dmp.type);
-  fprintf(stderr, "  first_address        : %" PRIu16 "\n", ntohs(packet->dmp.first_address));
-  fprintf(stderr, "  address_increment    : %" PRIu16 "\n", ntohs(packet->dmp.address_increment));
-  fprintf(stderr, "  property_value_count : %" PRIu16 "\n", ntohs(packet->dmp.property_value_count));
-  fprintf(stderr, "  property_values      :");
-  for (size_t pos=0, total=ntohs(packet->dmp.property_value_count); pos<total; pos++)
-    fprintf(stderr, " %02x", packet->dmp.property_values[pos]);
+  fprintf(stderr, "  Flags & Length       : %" PRIu16 "\n", ntohs(packet->dmp.flength));
+  fprintf(stderr, "  Vector               : %" PRIu8 "\n", packet->dmp.vector);
+  fprintf(stderr, "  Address & Data Type  : %" PRIu8 "\n", packet->dmp.type);
+  fprintf(stderr, "  First Address        : %" PRIu16 "\n", ntohs(packet->dmp.first_addr));
+  fprintf(stderr, "  Address Increment    : %" PRIu16 "\n", ntohs(packet->dmp.addr_inc));
+  fprintf(stderr, "  Property Value Count : %" PRIu16 "\n", ntohs(packet->dmp.prop_value_cnt));
+  fprintf(stderr, "  Property Values      :");
+  for (size_t pos=0, total=ntohs(packet->dmp.prop_value_cnt); pos<total; pos++)
+    fprintf(stderr, " %02x", packet->dmp.prop_values[pos]);
   fprintf(stderr, "\n");
   return 0;
+}
+
+/* Return a string describing an E1.31 error */
+extern const char *e131_strerror(const e131_error_t error) {
+  switch (error) {
+    case E131_ERR_NONE:
+      return "Success";
+    case E131_ERR_PREAMBLE_SIZE:
+      return "Invalid Preamble Size";
+    case E131_ERR_POSTAMBLE_SIZE:
+      return "Invalid Post-amble Size";
+    case E131_ERR_ACN_PID:
+      return "Invalid ACN Packet Identifier";
+    case E131_ERR_VECTOR_ROOT:
+      return "Invalid Root Layer Vector";
+    case E131_ERR_VECTOR_FRAME:
+      return "Invalid Framing Layer Vector";
+    case E131_ERR_VECTOR_DMP:
+      return "Invalid Device Management Protocol (DMP) Layer Vector";
+    case E131_ERR_TYPE_DMP:
+      return "Invalid DMP Address & Data Type";
+    default:
+      return "Unknown error";
+  }
 }

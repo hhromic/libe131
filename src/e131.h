@@ -30,10 +30,16 @@
 
 /* E1.31 Constants */
 extern const uint16_t E131_DEFAULT_PORT;
-extern const uint8_t E131_ACN_ID[];
+extern const uint8_t E131_DEFAULT_PRIORITY;
+extern const uint16_t E131_PREAMBLE_SIZE;
+extern const uint16_t E131_POSTAMBLE_SIZE;
+extern const uint8_t E131_ACN_PID[];
 extern const uint32_t E131_ROOT_VECTOR;
 extern const uint32_t E131_FRAME_VECTOR;
 extern const uint8_t E131_DMP_VECTOR;
+extern const uint8_t E131_DMP_TYPE;
+extern const uint16_t E131_DMP_FIRST_ADDR;
+extern const uint16_t E131_DMP_ADDR_INC;
 
 /* E1.31 Socket Address Type */
 typedef struct sockaddr_in e131_addr_t;
@@ -42,77 +48,83 @@ typedef struct sockaddr_in e131_addr_t;
 typedef union {
   struct {
     struct { /* Root Layer: 38 bytes */
-      uint16_t preamble_size;
-      uint16_t postamble_size;
-      uint8_t  acn_id[12];
-      uint16_t flength;
-      uint32_t vector;
-      uint8_t  cid[16];
+      uint16_t preamble_size;    /* Preamble Size */
+      uint16_t postamble_size;   /* Post-amble Size */
+      uint8_t  acn_pid[12];      /* ACN Packet Identifier */
+      uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
+      uint32_t vector;           /* Protocol Vector */
+      uint8_t  cid[16];          /* Sender's Unique Client ID */
     } __attribute__((packed)) root;
 
     struct { /* Framing Layer: 77 bytes */
-      uint16_t flength;
-      uint32_t vector;
-      uint8_t  source_name[64];
-      uint8_t  priority;
-      uint16_t reserved;
-      uint8_t  sequence_number;
-      uint8_t  options;
-      uint16_t universe;
+      uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
+      uint32_t vector;           /* Protocol Vector */
+      uint8_t  source_name[64];  /* User Assigned Name of Source (UTF-8) */
+      uint8_t  priority;         /* Data Priority (0-200, default 100) */
+      uint16_t reserved;         /* Reserved (should be always 0) */
+      uint8_t  seq_number;       /* Sequence Number (detect duplicates or out of order packets) */
+      uint8_t  options;          /* Options Flags (bit 7: preview data, bit 6: stream terminated) */
+      uint16_t universe;         /* DMX Universe Number */
     } __attribute__((packed)) frame;
 
     struct { /* Device Management Protocol (DMP) Layer: 523 bytes */
-      uint16_t flength;
-      uint8_t  vector;
-      uint8_t  type;
-      uint16_t first_address;
-      uint16_t address_increment;
-      uint16_t property_value_count;
-      uint8_t  property_values[513];
+      uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
+      uint8_t  vector;           /* Protocol Vector */
+      uint8_t  type;             /* Address Type & Data Type */
+      uint16_t first_addr;       /* First Property Address */
+      uint16_t addr_inc;         /* Address Increment */
+      uint16_t prop_value_cnt;   /* Property Value Count (1 + number of slots) */
+      uint8_t  prop_values[513]; /* Property Values (DMX start code + slots data) */
     } __attribute__((packed)) dmp;
   } __attribute__((packed));
 
-  uint8_t raw[638]; /* raw buffer: 638 bytes */
+  uint8_t raw[638]; /* raw buffer view: 638 bytes */
 } e131_packet_t;
 
 /* E1.31 Errors Type */
 typedef enum {
   E131_ERR_NONE,
   E131_ERR_NULLPTR,
-  E131_ERR_ACN_ID,
+  E131_ERR_PREAMBLE_SIZE,
+  E131_ERR_POSTAMBLE_SIZE,
+  E131_ERR_ACN_PID,
   E131_ERR_VECTOR_ROOT,
   E131_ERR_VECTOR_FRAME,
-  E131_ERR_VECTOR_DMP
+  E131_ERR_VECTOR_DMP,
+  E131_ERR_TYPE_DMP
 } e131_error_t;
 
-/** Create a socket file descriptor suitable for E1.31 communication */
+/* Create a socket file descriptor suitable for E1.31 communication */
 extern int e131_socket(void);
 
-/** Bind a socket file descriptor to a port number for E1.31 communication */
+/* Bind a socket file descriptor to a port number for E1.31 communication */
 extern int e131_bind(int sockfd, const uint16_t port);
 
-/** Initialize a unicast E1.31 destination using a host and port number */
+/* Initialize a unicast E1.31 destination using a host and port number */
 extern int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest);
 
-/** Initialize a multicast E1.31 destination using a universe and port number */
+/* Initialize a multicast E1.31 destination using a universe and port number */
 extern int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_t *dest);
 
-/** Join a socket file descriptor to a E1.31 multicast group using a universe */
+/* Join a socket file descriptor to a E1.31 multicast group using a universe */
 extern int e131_multicast_join(int sockfd, const uint16_t universe);
 
-/** Initialize a new E1.31 packet using a number of channels */
-extern int e131_pkt_init(const uint16_t universe, const uint16_t num_channels, e131_packet_t *packet);
+/* Initialize a new E1.31 packet using a number of slots */
+extern int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet);
 
-/** Send an E1.31 packet to a socket file descriptor using a destination */
+/* Send an E1.31 packet to a socket file descriptor using a destination */
 extern ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *dest);
 
-/** Receive an E1.31 packet from a socket file descriptor */
+/* Receive an E1.31 packet from a socket file descriptor */
 extern ssize_t e131_recv(int sockfd, e131_packet_t *packet);
 
-/** Validate that an E1.31 packet is well-formed */
+/* Validate that an E1.31 packet is well-formed */
 extern e131_error_t e131_pkt_validate(const e131_packet_t *packet);
 
-/** Dump an E1.31 packet to the stderr output */
+/* Dump an E1.31 packet to the stderr output */
 extern int e131_pkt_dump(const e131_packet_t *packet);
+
+/* Return a string describing an E1.31 error */
+extern const char *e131_strerror(const e131_error_t error);
 
 #endif
