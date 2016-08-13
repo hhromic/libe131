@@ -104,7 +104,7 @@ int e131_multicast_join(int sockfd, const uint16_t universe) {
   return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
 }
 
-/* Initialize a new E1.31 packet to default values */
+/* Initialize a new E1.31 packet using a universe and a number of slots */
 int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet) {
   if (packet == NULL || universe < 1 || universe > 63999 || num_slots < 1 || num_slots > 512) {
     errno = EINVAL;

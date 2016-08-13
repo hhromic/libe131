@@ -107,7 +107,7 @@ extern int e131_multicast_dest(const uint16_t universe, const uint16_t port, e13
 /* Join a socket file descriptor to an E1.31 multicast group using a universe */
 extern int e131_multicast_join(int sockfd, const uint16_t universe);
 
-/* Initialize a new E1.31 packet using a number of slots */
+/* Initialize a new E1.31 packet using a universe and a number of slots */
 extern int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet);
 
 /* Check if the preview option is enabled in an E1.31 packet */
