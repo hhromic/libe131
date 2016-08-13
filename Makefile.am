@@ -1,7 +1,7 @@
 AM_CFLAGS = -Wall -O3 -std=gnu11 -pedantic
 ACLOCAL_AMFLAGS = -I m4
 
-dist_doc_DATA = README.md
+dist_doc_DATA = LICENSE README.md
 
 lib_LTLIBRARIES = libe131.la
 libe131_la_SOURCES = src/e131.c
