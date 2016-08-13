@@ -10,7 +10,7 @@ The simplest way to think about E1.31 is that it is a way to transport a large n
 
 ## Installation
 
-To install libE131 in your system, use the standard autotools approach:
+To install libE131 in your system, download the [latest release archive][releases] and use the standard autotools approach:
 
     $ ./configure --prefix=/usr
     $ make
@@ -19,6 +19,8 @@ To install libE131 in your system, use the standard autotools approach:
 The last step requires `root` privileges. You can uninstall the library using:
 
     $ sudo make uninstall
+
+[releases]: https://github.com/hhromic/libe131/releases
 
 ## E1.31 (sACN) Packets
 
