@@ -22,7 +22,7 @@ int main() {
     if (e131_recv(sockfd, &packet)<0)
       err(EXIT_FAILURE, "e131_recv");
     if ((error = e131_pkt_validate(&packet)) != E131_ERR_NONE) {
-      fprintf(stderr, "%s\n", e131_strerror(error));
+      fprintf(stderr, "e131_pkt_validate: %s\n", e131_strerror(error));
       continue;
     }
     e131_pkt_dump(&packet);
