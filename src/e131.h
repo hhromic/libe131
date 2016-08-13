@@ -138,7 +138,7 @@ extern ssize_t e131_recv(int sockfd, e131_packet_t *packet);
 extern e131_error_t e131_pkt_validate(const e131_packet_t *packet);
 
 /* Check if an E1.31 packet should be discarded (sequence number out of order) */
-extern bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq);
+extern bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq_number);
 
 /* Dump an E1.31 packet to the stderr output */
 extern int e131_pkt_dump(const e131_packet_t *packet);

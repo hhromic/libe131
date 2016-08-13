@@ -225,11 +225,11 @@ e131_error_t e131_pkt_validate(const e131_packet_t *packet) {
 }
 
 /* Check if an E1.31 packet should be discarded (sequence number out of order) */
-bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq) {
+bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq_number) {
   if (packet == NULL)
     return true;
-  int8_t seq_diff = packet->frame.seq_number - last_seq;
-  if (seq_diff > -20 && seq_diff <= 0)
+  int8_t seq_num_diff = packet->frame.seq_number - last_seq_number;
+  if (seq_num_diff > -20 && seq_num_diff <= 0)
     return true;
   return false;
 }
