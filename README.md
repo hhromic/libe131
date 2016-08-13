@@ -20,7 +20,7 @@ The last step requires `root` privileges. You can uninstall the library using:
 
     $ sudo make uninstall
 
-[releases]: https://github.com/hhromic/libe131/releases
+[releases]: https://github.com/hhromic/libe131/releases/latest
 
 ## E1.31 (sACN) Packets
 
