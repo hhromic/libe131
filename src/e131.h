@@ -23,24 +23,18 @@
 
 #ifndef _E131_H
 #define _E131_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 
-/* E1.31 Constants */
+/* E1.31 Public Constants */
 extern const uint16_t E131_DEFAULT_PORT;
 extern const uint8_t E131_DEFAULT_PRIORITY;
-extern const uint16_t E131_PREAMBLE_SIZE;
-extern const uint16_t E131_POSTAMBLE_SIZE;
-extern const uint8_t E131_ACN_PID[];
-extern const uint32_t E131_ROOT_VECTOR;
-extern const uint32_t E131_FRAME_VECTOR;
-extern const uint8_t E131_DMP_VECTOR;
-extern const uint8_t E131_DMP_TYPE;
-extern const uint16_t E131_DMP_FIRST_ADDR;
-extern const uint16_t E131_DMP_ADDR_INC;
 
 /* E1.31 Socket Address Type */
 typedef struct sockaddr_in e131_addr_t;
@@ -146,4 +140,7 @@ extern int e131_pkt_dump(const e131_packet_t *packet);
 /* Return a string describing an E1.31 error */
 extern const char *e131_strerror(const e131_error_t error);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

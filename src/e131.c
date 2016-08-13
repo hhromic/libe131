@@ -30,18 +30,20 @@
 #include <arpa/inet.h>
 #include "e131.h"
 
-/* E1.31 Constants */
+/* E1.31 Public Constants */
 const uint16_t E131_DEFAULT_PORT = 5568;
 const uint8_t E131_DEFAULT_PRIORITY = 0x64;
-const uint16_t E131_PREAMBLE_SIZE = 0x0010;
-const uint16_t E131_POSTAMBLE_SIZE = 0x0000;
-const uint8_t E131_ACN_PID[] = {0x41, 0x53, 0x43, 0x2d, 0x45, 0x31, 0x2e, 0x31, 0x37, 0x00, 0x00, 0x00};
-const uint32_t E131_ROOT_VECTOR = 0x00000004;
-const uint32_t E131_FRAME_VECTOR = 0x00000002;
-const uint8_t E131_DMP_VECTOR = 0x02;
-const uint8_t E131_DMP_TYPE = 0xa1;
-const uint16_t E131_DMP_FIRST_ADDR = 0x0000;
-const uint16_t E131_DMP_ADDR_INC = 0x0001;
+
+/* E1.31 Private Constants */
+const uint16_t _E131_PREAMBLE_SIZE = 0x0010;
+const uint16_t _E131_POSTAMBLE_SIZE = 0x0000;
+const uint8_t _E131_ACN_PID[] = {0x41, 0x53, 0x43, 0x2d, 0x45, 0x31, 0x2e, 0x31, 0x37, 0x00, 0x00, 0x00};
+const uint32_t _E131_ROOT_VECTOR = 0x00000004;
+const uint32_t _E131_FRAME_VECTOR = 0x00000002;
+const uint8_t _E131_DMP_VECTOR = 0x02;
+const uint8_t _E131_DMP_TYPE = 0xa1;
+const uint16_t _E131_DMP_FIRST_ADDR = 0x0000;
+const uint16_t _E131_DMP_ADDR_INC = 0x0001;
 
 /* Create a socket file descriptor suitable for E1.31 communication */
 int e131_socket(void) {
@@ -121,24 +123,24 @@ int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet
   memset(packet, 0, sizeof *packet);
 
   // set Root Layer values
-  packet->root.preamble_size = htons(E131_PREAMBLE_SIZE);
-  packet->root.postamble_size = htons(E131_POSTAMBLE_SIZE);
-  memcpy(packet->root.acn_pid, E131_ACN_PID, sizeof packet->root.acn_pid);
+  packet->root.preamble_size = htons(_E131_PREAMBLE_SIZE);
+  packet->root.postamble_size = htons(_E131_POSTAMBLE_SIZE);
+  memcpy(packet->root.acn_pid, _E131_ACN_PID, sizeof packet->root.acn_pid);
   packet->root.flength = htons(0x7000 | root_length);
-  packet->root.vector = htonl(E131_ROOT_VECTOR);
+  packet->root.vector = htonl(_E131_ROOT_VECTOR);
 
   // set Framing Layer values
   packet->frame.flength = htons(0x7000 | frame_length);
-  packet->frame.vector = htonl(E131_FRAME_VECTOR);
+  packet->frame.vector = htonl(_E131_FRAME_VECTOR);
   packet->frame.priority = E131_DEFAULT_PRIORITY;
   packet->frame.universe = htons(universe);
 
   // set Device Management Protocol (DMP) Layer values
   packet->dmp.flength = htons(0x7000 | dmp_length);
-  packet->dmp.vector = E131_DMP_VECTOR;
-  packet->dmp.type = E131_DMP_TYPE;
-  packet->dmp.first_addr = htons(E131_DMP_FIRST_ADDR);
-  packet->dmp.addr_inc = htons(E131_DMP_ADDR_INC);
+  packet->dmp.vector = _E131_DMP_VECTOR;
+  packet->dmp.type = _E131_DMP_TYPE;
+  packet->dmp.first_addr = htons(_E131_DMP_FIRST_ADDR);
+  packet->dmp.addr_inc = htons(_E131_DMP_ADDR_INC);
   packet->dmp.prop_val_cnt = htons(prop_val_cnt);
 
   return 0;
@@ -203,23 +205,23 @@ ssize_t e131_recv(int sockfd, e131_packet_t *packet) {
 e131_error_t e131_pkt_validate(const e131_packet_t *packet) {
   if (packet == NULL)
     return E131_ERR_NULLPTR;
-  if (ntohs(packet->root.preamble_size) != E131_PREAMBLE_SIZE)
+  if (ntohs(packet->root.preamble_size) != _E131_PREAMBLE_SIZE)
     return E131_ERR_PREAMBLE_SIZE;
-  if (ntohs(packet->root.postamble_size) != E131_POSTAMBLE_SIZE)
+  if (ntohs(packet->root.postamble_size) != _E131_POSTAMBLE_SIZE)
     return E131_ERR_POSTAMBLE_SIZE;
-  if (memcmp(packet->root.acn_pid, E131_ACN_PID, sizeof packet->root.acn_pid) != 0)
+  if (memcmp(packet->root.acn_pid, _E131_ACN_PID, sizeof packet->root.acn_pid) != 0)
     return E131_ERR_ACN_PID;
-  if (ntohl(packet->root.vector) != E131_ROOT_VECTOR)
+  if (ntohl(packet->root.vector) != _E131_ROOT_VECTOR)
     return E131_ERR_VECTOR_ROOT;
-  if (ntohl(packet->frame.vector) != E131_FRAME_VECTOR)
+  if (ntohl(packet->frame.vector) != _E131_FRAME_VECTOR)
     return E131_ERR_VECTOR_FRAME;
-  if (packet->dmp.vector != E131_DMP_VECTOR)
+  if (packet->dmp.vector != _E131_DMP_VECTOR)
     return E131_ERR_VECTOR_DMP;
-  if (packet->dmp.type != E131_DMP_TYPE)
+  if (packet->dmp.type != _E131_DMP_TYPE)
     return E131_ERR_TYPE_DMP;
-  if (htons(packet->dmp.first_addr) != E131_DMP_FIRST_ADDR)
+  if (htons(packet->dmp.first_addr) != _E131_DMP_FIRST_ADDR)
     return E131_ERR_FIRST_ADDR_DMP;
-  if (htons(packet->dmp.addr_inc) != E131_DMP_ADDR_INC)
+  if (htons(packet->dmp.addr_inc) != _E131_DMP_ADDR_INC)
     return E131_ERR_ADDR_INC_DMP;
   return E131_ERR_NONE;
 }
