@@ -6,6 +6,7 @@
 int main() {
   int sockfd;
   e131_packet_t packet;
+  e131_error_t error;
 
   // create a socket for E1.31
   if ((sockfd = e131_socket())<0)
@@ -20,8 +21,10 @@ int main() {
   for (;;) {
     if (e131_recv(sockfd, &packet)<0)
       err(EXIT_FAILURE, "e131_recv");
-    if (e131_pkt_validate(&packet) != E131_ERR_NONE)
-      fprintf(stderr, "packet validation failed\n");
+    if ((error = e131_pkt_validate(&packet)) != E131_ERR_NONE) {
+      fprintf(stderr, "%s\n", e131_strerror(error));
+      continue;
+    }
     e131_pkt_dump(&packet);
   }
 }
