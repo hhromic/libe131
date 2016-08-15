@@ -11,17 +11,19 @@ int main() {
   uint8_t last_seq = 0x00;
 
   // create a socket for E1.31
-  if ((sockfd = e131_socket())<0)
+  if ((sockfd = e131_socket()) < 0)
     err(EXIT_FAILURE, "e131_socket");
 
-  // bind the socket to the default E1.31 port
-  if (e131_bind(sockfd, E131_DEFAULT_PORT)<0)
+  // bind the socket to the default E1.31 port and join multicast group for universe 1
+  if (e131_bind(sockfd, E131_DEFAULT_PORT) < 0)
     err(EXIT_FAILURE, "e131_bind");
+  if (e131_multicast_join(sockfd, 1) < 0)
+    err(EXIT_FAILURE, "e131_multicast_join");
 
   // loop to receive E1.31 packets
   fprintf(stderr, "waiting for E1.31 packets ...\n");
   for (;;) {
-    if (e131_recv(sockfd, &packet)<0)
+    if (e131_recv(sockfd, &packet) < 0)
       err(EXIT_FAILURE, "e131_recv");
     if ((error = e131_pkt_validate(&packet)) != E131_ERR_NONE) {
       fprintf(stderr, "e131_pkt_validate: %s\n", e131_strerror(error));

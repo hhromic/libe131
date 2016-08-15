@@ -40,7 +40,7 @@ extern const uint8_t E131_DEFAULT_PRIORITY;
 typedef struct sockaddr_in e131_addr_t;
 
 /* E1.31 Packet Type */
-/* All packet contents shall be transmitted in network byte order (big endian). */
+/* All packet contents shall be transmitted in network byte order (big endian) */
 typedef union {
   struct {
     struct { /* ACN Root Layer: 38 bytes */
@@ -77,7 +77,13 @@ typedef union {
   uint8_t raw[638]; /* raw buffer view: 638 bytes */
 } e131_packet_t;
 
-/* E1.31 Errors Type */
+/* E1.31 Framing Options Type */
+typedef enum {
+  E131_OPT_TERMINATED = 6,
+  E131_OPT_PREVIEW = 7,
+} e131_option_t;
+
+/* E1.31 Validation Errors Type */
 typedef enum {
   E131_ERR_NONE,
   E131_ERR_NULLPTR,
@@ -89,7 +95,7 @@ typedef enum {
   E131_ERR_VECTOR_DMP,
   E131_ERR_TYPE_DMP,
   E131_ERR_FIRST_ADDR_DMP,
-  E131_ERR_ADDR_INC_DMP
+  E131_ERR_ADDR_INC_DMP,
 } e131_error_t;
 
 /* Create a socket file descriptor suitable for E1.31 communication */
@@ -99,28 +105,22 @@ extern int e131_socket(void);
 extern int e131_bind(int sockfd, const uint16_t port);
 
 /* Initialize a unicast E1.31 destination using a host and port number */
-extern int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest);
+extern int e131_unicast_dest(e131_addr_t *dest, const char *host, const uint16_t port);
 
 /* Initialize a multicast E1.31 destination using a universe and port number */
-extern int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_t *dest);
+extern int e131_multicast_dest(e131_addr_t *dest, const uint16_t universe, const uint16_t port);
 
 /* Join a socket file descriptor to an E1.31 multicast group using a universe */
 extern int e131_multicast_join(int sockfd, const uint16_t universe);
 
-/* Initialize a new E1.31 packet using a universe and a number of slots */
-extern int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet);
+/* Initialize an E1.31 packet using a universe and a number of slots */
+extern int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t num_slots);
 
-/* Check if the preview option is enabled in an E1.31 packet */
-extern bool e131_is_preview(const e131_packet_t *packet);
+/* Get the state of a framing option in an E1.31 packet */
+extern bool e131_get_option(const e131_packet_t *packet, const e131_option_t option);
 
-/* Set the state of the preview option in an E1.31 packet */
-extern int e131_set_preview(e131_packet_t *packet, const bool state);
-
-/* Check if the stream terminated option is enabled in an E1.31 packet */
-extern bool e131_is_terminated(const e131_packet_t *packet);
-
-/* Set the state of the stream terminated option in an E1.31 packet */
-extern int e131_set_terminated(e131_packet_t *packet, const bool state);
+/* Set the state of a framing option in an E1.31 packet */
+extern int e131_set_option(e131_packet_t *packet, const e131_option_t option, const bool state);
 
 /* Send an E1.31 packet to a socket file descriptor using a destination */
 extern ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *dest);

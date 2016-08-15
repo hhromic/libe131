@@ -61,8 +61,8 @@ int e131_bind(int sockfd, const uint16_t port) {
 }
 
 /* Initialize a unicast E1.31 destination using a host and port number */
-int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest) {
-  if (host == NULL || dest == NULL) {
+int e131_unicast_dest(e131_addr_t *dest, const char *host, const uint16_t port) {
+  if (dest == NULL || host == NULL) {
     errno = EINVAL;
     return -1;
   }
@@ -79,8 +79,8 @@ int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest) 
 }
 
 /* Initialize a multicast E1.31 destination using a universe and port number */
-int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_t *dest) {
-  if (universe < 1 || universe > 63999 || dest == NULL) {
+int e131_multicast_dest(e131_addr_t *dest, const uint16_t universe, const uint16_t port) {
+  if (dest == NULL || universe < 1 || universe > 63999) {
     errno = EINVAL;
     return -1;
   }
@@ -91,7 +91,7 @@ int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_
   return 0;
 }
 
-/* Join a socket file descriptor to a E1.31 multicast group using a universe */
+/* Join a socket file descriptor to an E1.31 multicast group using a universe */
 int e131_multicast_join(int sockfd, const uint16_t universe) {
   if (universe < 1 || universe > 63999) {
     errno = EINVAL;
@@ -104,8 +104,8 @@ int e131_multicast_join(int sockfd, const uint16_t universe) {
   return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
 }
 
-/* Initialize a new E1.31 packet using a universe and a number of slots */
-int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet) {
+/* Initialize an E1.31 packet using a universe and a number of slots */
+int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t num_slots) {
   if (packet == NULL || universe < 1 || universe > 63999 || num_slots < 1 || num_slots > 512) {
     errno = EINVAL;
     return -1;
@@ -146,37 +146,20 @@ int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet
   return 0;
 }
 
-/* Check if the preview option is enabled in an E1.31 packet */
-bool e131_is_preview(const e131_packet_t *packet) {
-  if (packet == NULL || packet->frame.options & (1 << 7))
+/* Get the state of a framing option in an E1.31 packet */
+bool e131_get_option(const e131_packet_t *packet, const e131_option_t option) {
+  if (packet == NULL || packet->frame.options & (1 << (option % 8)))
     return false;
   return true;
 }
 
-/* Set the state of the preview option in an E1.31 packet */
-int e131_set_preview(e131_packet_t *packet, const bool state) {
+/* Set the state of a framing option in an E1.31 packet */
+int e131_set_option(e131_packet_t *packet, const e131_option_t option, const bool state) {
   if (packet == NULL) {
     errno = EINVAL;
     return -1;
   }
-  packet->frame.options |= (1 << 7);
-  return 0;
-}
-
-/* Check if the stream terminated option is enabled in an E1.31 packet */
-bool e131_is_terminated(const e131_packet_t *packet) {
-  if (packet == NULL || packet->frame.options & (1 << 6))
-    return false;
-  return true;
-}
-
-/* Set the state of the stream terminated option in an E1.31 packet */
-int e131_set_terminated(e131_packet_t *packet, const bool state) {
-  if (packet == NULL) {
-    errno = EINVAL;
-    return -1;
-  }
-  packet->frame.options |= (1 << 6);
+  packet->frame.options |= (1 << (option % 8));
   return 0;
 }
 
@@ -201,7 +184,7 @@ ssize_t e131_recv(int sockfd, e131_packet_t *packet) {
   return recv(sockfd, packet->raw, sizeof packet->raw, 0);
 }
 
-/* Validate correctness of an E1.31 packet */
+/* Validate that an E1.31 packet is well-formed */
 e131_error_t e131_pkt_validate(const e131_packet_t *packet) {
   if (packet == NULL)
     return E131_ERR_NULLPTR;
