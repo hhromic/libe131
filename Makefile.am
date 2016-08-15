@@ -5,5 +5,5 @@ dist_doc_DATA = LICENSE README.md
 
 lib_LTLIBRARIES = libe131.la
 libe131_la_SOURCES = src/e131.c
-libe131_la_LDFLAGS = -export-symbols-regex '^[eE]131_[^_]'
+libe131_la_LDFLAGS = -export-symbols-regex '^[eE]131_[^_]' -version-info 1:0:0
 include_HEADERS = src/e131.h
