@@ -81,6 +81,15 @@ You can easily create and initialize a new E1.31 packet to be used for sending u
 
 See the examples sections to see how this data structure is used with libE131.
 
+### Framing Layer Options
+
+The library provides two convenience functions, `e131_get_option()` and `e131_set_option()` to manipulate the options flag in the Framing Layer of an E1.31 packet. The following is a description of the supported option constants:
+
+* `E131_OPT_TERMINATED`: the current packet is the last one in the stream. The receiver should stop processing further packets.
+* `E131_OPT_PREVIEW`: the data in the packet should be only used for preview purposes, e.g. console display, and not to drive live fixtures.
+
+See the examples sections to see how Framing Layer options are used with libE131.
+
 ### Packet Validation
 
 The library provides a convenience function, `e131_pkt_validate()`, to check if an E1.31 packet is valid to be processed by your application. This function returns a validation status from the `e131_error_t` enumeration. The following is a description of each available error constant:
@@ -152,23 +161,19 @@ See the examples sections to see how the most common API functions are used with
 
 * `int e131_socket(void)`: Create a socket file descriptor suitable for E1.31 communication. On success, a file descriptor for the new socket is returned. On error, -1 is returned, and `errno` is set appropriately.
 
-* `int e131_bind(int sockfd, const uint16_t port)`: Bind a socket file descriptor to a port number for E1.31 communication. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+* `int e131_bind(int sockfd, const uint16_t port)`: Bind a socket file descriptor to a port number for E1.31 communication. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
-* `int e131_unicast_dest(const char *host, const uint16_t port, e131_addr_t *dest)`: Initialize a unicast E1.31 destination using a host and port number.  On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+* `int e131_unicast_dest(e131_addr_t *dest, const char *host, const uint16_t port)`: Initialize a unicast E1.31 destination using a host and port number. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
-* `int e131_multicast_dest(const uint16_t universe, const uint16_t port, e131_addr_t *dest)`: Initialize a multicast E1.31 destination using a universe and port number. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+* `int e131_multicast_dest(e131_addr_t *dest, const uint16_t universe, const uint16_t port)`: Initialize a multicast E1.31 destination using a universe and port number. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
 * `int e131_multicast_join(int sockfd, const uint16_t universe)`: Join a socket file descriptor to an E1.31 multicast group using a universe. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
 
-* `int e131_pkt_init(const uint16_t universe, const uint16_t num_slots, e131_packet_t *packet)`:  Initialize a new E1.31 packet using a universe and a number of slots. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+* `int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t num_slots)`:  Initialize an E1.31 packet using a universe and a number of slots. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
-* `bool e131_is_preview(const e131_packet_t *packet)`: Check if the preview option is enabled in an E1.31 packet.
+* `bool e131_get_option(const e131_packet_t *packet, const e131_option_t option)`: Get the state of a framing option in an E1.31 packet.
 
-* `int e131_set_preview(e131_packet_t *packet, const bool state)`: Set the state of the preview option in an E1.31 packet. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
-
-* `bool e131_is_terminated(const e131_packet_t *packet)`: Check if the stream terminated option is enabled in an E1.31 packet.
-
-* `int e131_set_terminated(e131_packet_t *packet, const bool state)`: Set the state of the stream terminated option in an E1.31 packet. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+* `int e131_set_option(e131_packet_t *packet, const e131_option_t option, const bool state)`: Set the state of a framing option in an E1.31 packet. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
 * `ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *dest)`: Send an E1.31 packet to a socket file descriptor using a destination. On success, the number of bytes sent is returned. On error, -1 is returned, and `errno` is set appropriately.
 
