@@ -137,6 +137,9 @@ extern bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq
 /* Dump an E1.31 packet to the stderr output */
 extern int e131_pkt_dump(const e131_packet_t *packet);
 
+/* Return a string describing an E1.31 destination */
+extern const char *e131_strdest(const e131_addr_t *dest);
+
 /* Return a string describing an E1.31 error */
 extern const char *e131_strerror(const e131_error_t error);
 

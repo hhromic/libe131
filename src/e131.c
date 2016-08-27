@@ -285,3 +285,10 @@ const char *e131_strerror(const e131_error_t error) {
       return "Unknown error";
   }
 }
+
+/* Return a string describing an E1.31 destination */
+const char *e131_strdest(const e131_addr_t *dest) {
+  char *strdest = (char *)malloc(sizeof(char) * 22);
+  sprintf(strdest, "%s:%d", inet_ntoa(dest->sin_addr), ntohs(dest->sin_port));
+  return strdest;
+}

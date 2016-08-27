@@ -185,6 +185,8 @@ See the examples sections to see how the most common API functions are used with
 
 * `int e131_pkt_dump(const e131_packet_t *packet)`: Dump an E1.31 packet to the stderr output. The output is formatted for human readable output.
 
+* `const char *e131_strdest(const e131_addr_t *dest)`: Return a string describing an E1.31 destination.
+
 * `const char *e131_strerror(const e131_error_t error)`: Return a string describing an E1.31 error.
 
 ## Example: Creating a Client
