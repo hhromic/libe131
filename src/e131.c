@@ -258,6 +258,13 @@ int e131_pkt_dump(const e131_packet_t *packet) {
   return 0;
 }
 
+/* Return a string describing an E1.31 destination */
+const char *e131_strdest(const e131_addr_t *dest) {
+  char *strdest = (char *)malloc(sizeof(char) * 22);
+  sprintf(strdest, "%s:%d", inet_ntoa(dest->sin_addr), ntohs(dest->sin_port));
+  return strdest;
+}
+
 /* Return a string describing an E1.31 error */
 const char *e131_strerror(const e131_error_t error) {
   switch (error) {
@@ -284,11 +291,4 @@ const char *e131_strerror(const e131_error_t error) {
     default:
       return "Unknown error";
   }
-}
-
-/* Return a string describing an E1.31 destination */
-const char *e131_strdest(const e131_addr_t *dest) {
-  char *strdest = (char *)malloc(sizeof(char) * 22);
-  sprintf(strdest, "%s:%d", inet_ntoa(dest->sin_addr), ntohs(dest->sin_port));
-  return strdest;
 }
