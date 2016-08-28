@@ -32,7 +32,7 @@ int main() {
     level++;
     if (e131_send(sockfd, &packet, &dest) < 0)
       err(EXIT_FAILURE, "e131_send");
-    e131_pkt_dump(&packet);
+    e131_pkt_dump(stderr, &packet);
     packet.frame.seq_number++;
     usleep(250000);
   }

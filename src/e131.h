@@ -27,6 +27,7 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -110,6 +111,9 @@ extern int e131_unicast_dest(e131_addr_t *dest, const char *host, const uint16_t
 /* Initialize a multicast E1.31 destination using a universe and port number */
 extern int e131_multicast_dest(e131_addr_t *dest, const uint16_t universe, const uint16_t port);
 
+/* Describe an E1.31 destination into a string (must be at least 22 bytes) */
+extern int e131_dest_str(char *str, const e131_addr_t *dest);
+
 /* Join a socket file descriptor to an E1.31 multicast group using a universe */
 extern int e131_multicast_join(int sockfd, const uint16_t universe);
 
@@ -134,11 +138,8 @@ extern e131_error_t e131_pkt_validate(const e131_packet_t *packet);
 /* Check if an E1.31 packet should be discarded (sequence number out of order) */
 extern bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq_number);
 
-/* Dump an E1.31 packet to the stderr output */
-extern int e131_pkt_dump(const e131_packet_t *packet);
-
-/* Return a string describing an E1.31 destination */
-extern const char *e131_strdest(const e131_addr_t *dest);
+/* Dump an E1.31 packet to a stream (i.e. stdout, stderr) */
+extern int e131_pkt_dump(FILE *stream, const e131_packet_t *packet);
 
 /* Return a string describing an E1.31 error */
 extern const char *e131_strerror(const e131_error_t error);

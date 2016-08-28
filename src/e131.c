@@ -21,7 +21,6 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -88,6 +87,16 @@ int e131_multicast_dest(e131_addr_t *dest, const uint16_t universe, const uint16
   dest->sin_addr.s_addr = htonl(0xefff0000 | universe);
   dest->sin_port = htons(port);
   memset(dest->sin_zero, 0, sizeof dest->sin_zero);
+  return 0;
+}
+
+/* Describe an E1.31 destination into a string */
+int e131_dest_str(char *str, const e131_addr_t *dest) {
+  if (str == NULL || dest == NULL) {
+    errno = EINVAL;
+    return -1;
+  }
+  sprintf(str, "%s:%d", inet_ntoa(dest->sin_addr), ntohs(dest->sin_port));
   return 0;
 }
 
@@ -219,50 +228,43 @@ bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq_number
   return false;
 }
 
-/* Dump an E1.31 packet to the stderr output */
-int e131_pkt_dump(const e131_packet_t *packet) {
-  if (packet == NULL) {
+/* Dump an E1.31 packet to a stream (i.e. stdout, stderr) */
+int e131_pkt_dump(FILE *stream, const e131_packet_t *packet) {
+  if (stream == NULL || packet == NULL) {
     errno = EINVAL;
     return -1;
   }
-  fprintf(stderr, "[Root Layer]\n");
-  fprintf(stderr, "  Preamble Size ......... %" PRIu16 "\n", ntohs(packet->root.preamble_size));
-  fprintf(stderr, "  Post-amble Size ....... %" PRIu16 "\n", ntohs(packet->root.postamble_size));
-  fprintf(stderr, "  ACN Identifier ........ %s\n", packet->root.acn_pid);
-  fprintf(stderr, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->root.flength));
-  fprintf(stderr, "  Layer Vector .......... %" PRIu32 "\n", ntohl(packet->root.vector));
-  fprintf(stderr, "  Component Identifier .. ");
+  fprintf(stream, "[Root Layer]\n");
+  fprintf(stream, "  Preamble Size ......... %" PRIu16 "\n", ntohs(packet->root.preamble_size));
+  fprintf(stream, "  Post-amble Size ....... %" PRIu16 "\n", ntohs(packet->root.postamble_size));
+  fprintf(stream, "  ACN Identifier ........ %s\n", packet->root.acn_pid);
+  fprintf(stream, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->root.flength));
+  fprintf(stream, "  Layer Vector .......... %" PRIu32 "\n", ntohl(packet->root.vector));
+  fprintf(stream, "  Component Identifier .. ");
   for (size_t pos=0, total=sizeof packet->root.cid; pos<total; pos++)
-    fprintf(stderr, "%02x", packet->root.cid[pos]);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "[Framing Layer]\n");
-  fprintf(stderr, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->frame.flength));
-  fprintf(stderr, "  Layer Vector .......... %" PRIu32 "\n", ntohl(packet->frame.vector));
-  fprintf(stderr, "  Source Name ........... %s\n", packet->frame.source_name);
-  fprintf(stderr, "  Packet Priority ....... %" PRIu8 "\n", packet->frame.priority);
-  fprintf(stderr, "  Reserved .............. %" PRIu16 "\n", ntohs(packet->frame.reserved));
-  fprintf(stderr, "  Sequence Number ....... %" PRIu8 "\n", packet->frame.seq_number);
-  fprintf(stderr, "  Options Flags ......... %" PRIu8 "\n", packet->frame.options);
-  fprintf(stderr, "  DMX Universe Number ... %" PRIu16 "\n", ntohs(packet->frame.universe));
-  fprintf(stderr, "[Device Management Protocol (DMP) Layer]\n");
-  fprintf(stderr, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->dmp.flength));
-  fprintf(stderr, "  Layer Vector .......... %" PRIu8 "\n", packet->dmp.vector);
-  fprintf(stderr, "  Address & Data Type ... %" PRIu8 "\n", packet->dmp.type);
-  fprintf(stderr, "  First Address ......... %" PRIu16 "\n", ntohs(packet->dmp.first_addr));
-  fprintf(stderr, "  Address Increment ..... %" PRIu16 "\n", ntohs(packet->dmp.addr_inc));
-  fprintf(stderr, "  Property Value Count .. %" PRIu16 "\n", ntohs(packet->dmp.prop_val_cnt));
-  fprintf(stderr, "[DMP Property Values]\n ");
+    fprintf(stream, "%02x", packet->root.cid[pos]);
+  fprintf(stream, "\n");
+  fprintf(stream, "[Framing Layer]\n");
+  fprintf(stream, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->frame.flength));
+  fprintf(stream, "  Layer Vector .......... %" PRIu32 "\n", ntohl(packet->frame.vector));
+  fprintf(stream, "  Source Name ........... %s\n", packet->frame.source_name);
+  fprintf(stream, "  Packet Priority ....... %" PRIu8 "\n", packet->frame.priority);
+  fprintf(stream, "  Reserved .............. %" PRIu16 "\n", ntohs(packet->frame.reserved));
+  fprintf(stream, "  Sequence Number ....... %" PRIu8 "\n", packet->frame.seq_number);
+  fprintf(stream, "  Options Flags ......... %" PRIu8 "\n", packet->frame.options);
+  fprintf(stream, "  DMX Universe Number ... %" PRIu16 "\n", ntohs(packet->frame.universe));
+  fprintf(stream, "[Device Management Protocol (DMP) Layer]\n");
+  fprintf(stream, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->dmp.flength));
+  fprintf(stream, "  Layer Vector .......... %" PRIu8 "\n", packet->dmp.vector);
+  fprintf(stream, "  Address & Data Type ... %" PRIu8 "\n", packet->dmp.type);
+  fprintf(stream, "  First Address ......... %" PRIu16 "\n", ntohs(packet->dmp.first_addr));
+  fprintf(stream, "  Address Increment ..... %" PRIu16 "\n", ntohs(packet->dmp.addr_inc));
+  fprintf(stream, "  Property Value Count .. %" PRIu16 "\n", ntohs(packet->dmp.prop_val_cnt));
+  fprintf(stream, "[DMP Property Values]\n ");
   for (size_t pos=0, total=ntohs(packet->dmp.prop_val_cnt); pos<total; pos++)
-    fprintf(stderr, " %02x", packet->dmp.prop_val[pos]);
-  fprintf(stderr, "\n");
+    fprintf(stream, " %02x", packet->dmp.prop_val[pos]);
+  fprintf(stream, "\n");
   return 0;
-}
-
-/* Return a string describing an E1.31 destination */
-const char *e131_strdest(const e131_addr_t *dest) {
-  char *strdest = (char *)malloc(sizeof(char) * 22);
-  sprintf(strdest, "%s:%d", inet_ntoa(dest->sin_addr), ntohs(dest->sin_port));
-  return strdest;
 }
 
 /* Return a string describing an E1.31 error */

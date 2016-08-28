@@ -167,6 +167,8 @@ See the examples sections to see how the most common API functions are used with
 
 * `int e131_multicast_dest(e131_addr_t *dest, const uint16_t universe, const uint16_t port)`: Initialize a multicast E1.31 destination using a universe and port number. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
+* `int e131_dest_str(char *str, const e131_addr_t *dest)`: Describe an E1.31 destination into a string (must be at least 22 bytes). On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
+
 * `int e131_multicast_join(int sockfd, const uint16_t universe)`: Join a socket file descriptor to an E1.31 multicast group using a universe. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
 
 * `int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t num_slots)`:  Initialize an E1.31 packet using a universe and a number of slots. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
@@ -183,7 +185,7 @@ See the examples sections to see how the most common API functions are used with
 
 * `bool e131_pkt_discard(const e131_packet_t *packet, const uint8_t last_seq_number)`: Check if an E1.31 packet should be discarded (sequence number out of order). This function uses the standard out-of-sequence detection algorithm defined in the E1.31 specification.
 
-* `int e131_pkt_dump(const e131_packet_t *packet)`: Dump an E1.31 packet to the stderr output. The output is formatted for human readable output.
+* `int e131_pkt_dump(FILE *stream, const e131_packet_t *packet)`: Dump an E1.31 packet to a stream (i.e. stdout, stderr). The output is formatted for human readable output. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
 * `const char *e131_strdest(const e131_addr_t *dest)`: Return a string describing an E1.31 destination.
 

@@ -34,7 +34,7 @@ int main() {
       last_seq = packet.frame.seq_number;
       continue;
     }
-    e131_pkt_dump(&packet);
+    e131_pkt_dump(stderr, &packet);
     last_seq = packet.frame.seq_number;
   }
 }
