@@ -168,7 +168,7 @@ int e131_set_option(e131_packet_t *packet, const e131_option_t option, const boo
     errno = EINVAL;
     return -1;
   }
-  packet->frame.options |= (1 << (option % 8));
+  packet->frame.options ^= (-state ^ packet->frame.options) & (1 << (option % 8));
   return 0;
 }
 
@@ -235,31 +235,31 @@ int e131_pkt_dump(FILE *stream, const e131_packet_t *packet) {
     return -1;
   }
   fprintf(stream, "[Root Layer]\n");
-  fprintf(stream, "  Preamble Size ......... %" PRIu16 "\n", ntohs(packet->root.preamble_size));
-  fprintf(stream, "  Post-amble Size ....... %" PRIu16 "\n", ntohs(packet->root.postamble_size));
-  fprintf(stream, "  ACN Identifier ........ %s\n", packet->root.acn_pid);
-  fprintf(stream, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->root.flength));
-  fprintf(stream, "  Layer Vector .......... %" PRIu32 "\n", ntohl(packet->root.vector));
-  fprintf(stream, "  Component Identifier .. ");
+  fprintf(stream, "  Preamble Size .......... %" PRIu16 "\n", ntohs(packet->root.preamble_size));
+  fprintf(stream, "  Post-amble Size ........ %" PRIu16 "\n", ntohs(packet->root.postamble_size));
+  fprintf(stream, "  ACN Packet Identifier .. %s\n", packet->root.acn_pid);
+  fprintf(stream, "  Flags & Length ......... %" PRIu16 "\n", ntohs(packet->root.flength));
+  fprintf(stream, "  Layer Vector ........... %" PRIu32 "\n", ntohl(packet->root.vector));
+  fprintf(stream, "  Component Identifier ... ");
   for (size_t pos=0, total=sizeof packet->root.cid; pos<total; pos++)
     fprintf(stream, "%02x", packet->root.cid[pos]);
   fprintf(stream, "\n");
   fprintf(stream, "[Framing Layer]\n");
-  fprintf(stream, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->frame.flength));
-  fprintf(stream, "  Layer Vector .......... %" PRIu32 "\n", ntohl(packet->frame.vector));
-  fprintf(stream, "  Source Name ........... %s\n", packet->frame.source_name);
-  fprintf(stream, "  Packet Priority ....... %" PRIu8 "\n", packet->frame.priority);
-  fprintf(stream, "  Reserved .............. %" PRIu16 "\n", ntohs(packet->frame.reserved));
-  fprintf(stream, "  Sequence Number ....... %" PRIu8 "\n", packet->frame.seq_number);
-  fprintf(stream, "  Options Flags ......... %" PRIu8 "\n", packet->frame.options);
-  fprintf(stream, "  DMX Universe Number ... %" PRIu16 "\n", ntohs(packet->frame.universe));
+  fprintf(stream, "  Flags & Length ......... %" PRIu16 "\n", ntohs(packet->frame.flength));
+  fprintf(stream, "  Layer Vector ........... %" PRIu32 "\n", ntohl(packet->frame.vector));
+  fprintf(stream, "  Source Name ............ %s\n", packet->frame.source_name);
+  fprintf(stream, "  Packet Priority ........ %" PRIu8 "\n", packet->frame.priority);
+  fprintf(stream, "  Reserved ............... %" PRIu16 "\n", ntohs(packet->frame.reserved));
+  fprintf(stream, "  Sequence Number ........ %" PRIu8 "\n", packet->frame.seq_number);
+  fprintf(stream, "  Options Flags .......... %" PRIu8 "\n", packet->frame.options);
+  fprintf(stream, "  DMX Universe Number .... %" PRIu16 "\n", ntohs(packet->frame.universe));
   fprintf(stream, "[Device Management Protocol (DMP) Layer]\n");
-  fprintf(stream, "  Flags & Length ........ %" PRIu16 "\n", ntohs(packet->dmp.flength));
-  fprintf(stream, "  Layer Vector .......... %" PRIu8 "\n", packet->dmp.vector);
-  fprintf(stream, "  Address & Data Type ... %" PRIu8 "\n", packet->dmp.type);
-  fprintf(stream, "  First Address ......... %" PRIu16 "\n", ntohs(packet->dmp.first_addr));
-  fprintf(stream, "  Address Increment ..... %" PRIu16 "\n", ntohs(packet->dmp.addr_inc));
-  fprintf(stream, "  Property Value Count .. %" PRIu16 "\n", ntohs(packet->dmp.prop_val_cnt));
+  fprintf(stream, "  Flags & Length ......... %" PRIu16 "\n", ntohs(packet->dmp.flength));
+  fprintf(stream, "  Layer Vector ........... %" PRIu8 "\n", packet->dmp.vector);
+  fprintf(stream, "  Address & Data Type .... %" PRIu8 "\n", packet->dmp.type);
+  fprintf(stream, "  First Address .......... %" PRIu16 "\n", ntohs(packet->dmp.first_addr));
+  fprintf(stream, "  Address Increment ...... %" PRIu16 "\n", ntohs(packet->dmp.addr_inc));
+  fprintf(stream, "  Property Value Count ... %" PRIu16 "\n", ntohs(packet->dmp.prop_val_cnt));
   fprintf(stream, "[DMP Property Values]\n ");
   for (size_t pos=0, total=ntohs(packet->dmp.prop_val_cnt); pos<total; pos++)
     fprintf(stream, " %02x", packet->dmp.prop_val[pos]);
