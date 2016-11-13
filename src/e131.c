@@ -46,7 +46,7 @@ const uint16_t _E131_DMP_ADDR_INC = 0x0001;
 
 /* Create a socket file descriptor suitable for E1.31 communication */
 int e131_socket(void) {
-  return socket(PF_INET, SOCK_DGRAM, 0);
+  return socket(AF_INET, SOCK_DGRAM, 0);
 }
 
 /* Bind a socket file descriptor to a port number for E1.31 communication */
