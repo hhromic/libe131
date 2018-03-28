@@ -195,13 +195,13 @@ See the examples sections to see how the most common API functions are used with
 
 Included in this repository is an example to create a simple E1.31 client (`examples/test_client.c`). Compile it using:
 
-    gcc -le131 -Wall test_client.c -o test_client
+    gcc -Wall test_client.c -o test_client -le131
 
 ## Example: Creating a Server
 
 Included in this repository is an example to create a simple E1.31 server (`examples/test_server.c`). Compile it using:
 
-    gcc -le131 -Wall test_server.c -o test_server
+    gcc -Wall test_server.c -o test_server -le131
 
 ## Example Projects using libE131
 
