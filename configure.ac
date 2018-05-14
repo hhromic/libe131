@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([libe131], [1.3.1], [hhromic@gmail.com])
+AC_INIT([libe131], [1.4.0], [hhromic@gmail.com])
 AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT
