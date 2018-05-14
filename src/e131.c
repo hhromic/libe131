@@ -157,9 +157,9 @@ int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t
 
 /* Get the state of a framing option in an E1.31 packet */
 bool e131_get_option(const e131_packet_t *packet, const e131_option_t option) {
-  if (packet == NULL || packet->frame.options & (1 << (option % 8)))
-    return false;
-  return true;
+  if (packet != NULL && packet->frame.options & (1 << (option % 8)))
+    return true;
+  return false;
 }
 
 /* Set the state of a framing option in an E1.31 packet */
