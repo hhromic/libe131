@@ -19,8 +19,11 @@ To install libE131 in your system, download the [latest release archive][release
 The last step requires `root` privileges. You can uninstall the library using:
 
     $ sudo make uninstall
+    
+A development package is also available on the [AUR][aur-link].
 
 [releases]: https://github.com/hhromic/libe131/releases/latest
+[aur-link]: https://aur.archlinux.org/packages/libe131-git/
 
 ## E1.31 (sACN) Packets
 
