@@ -31,7 +31,25 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
+
+#ifndef _WIN32
 #include <netinet/in.h>
+#else
+#include <WinSock2.h>
+#endif
+
+#ifdef __GNUC__
+#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
+#endif
+
+#ifdef _MSC_VER
+#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
+#endif
+
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
 
 /* E1.31 Public Constants */
 extern const uint16_t E131_DEFAULT_PORT;
@@ -43,17 +61,17 @@ typedef struct sockaddr_in e131_addr_t;
 /* E1.31 Packet Type */
 /* All packet contents shall be transmitted in network byte order (big endian) */
 typedef union {
-  struct {
-    struct { /* ACN Root Layer: 38 bytes */
+  PACK(struct {
+    PACK(struct { /* ACN Root Layer: 38 bytes */
       uint16_t preamble_size;    /* Preamble Size */
       uint16_t postamble_size;   /* Post-amble Size */
       uint8_t  acn_pid[12];      /* ACN Packet Identifier */
       uint16_t flength;          /* Flags (high 4 bits) & Length (low 12 bits) */
       uint32_t vector;           /* Layer Vector */
       uint8_t  cid[16];          /* Component Identifier (UUID) */
-    } __attribute__((packed)) root;
+    }) root;
 
-    struct { /* Framing Layer: 77 bytes */
+    PACK(struct { /* Framing Layer: 77 bytes */
       uint16_t flength;          /* Flags (high 4 bits) & Length (low 12 bits) */
       uint32_t vector;           /* Layer Vector */
       uint8_t  source_name[64];  /* User Assigned Name of Source (UTF-8) */
@@ -62,9 +80,9 @@ typedef union {
       uint8_t  seq_number;       /* Sequence Number (detect duplicates or out of order packets) */
       uint8_t  options;          /* Options Flags (bit 7: preview data, bit 6: stream terminated) */
       uint16_t universe;         /* DMX Universe Number */
-    } __attribute__((packed)) frame;
+    }) frame;
 
-    struct { /* Device Management Protocol (DMP) Layer: 523 bytes */
+    PACK(struct { /* Device Management Protocol (DMP) Layer: 523 bytes */
       uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
       uint8_t  vector;           /* Layer Vector */
       uint8_t  type;             /* Address Type & Data Type */
@@ -72,8 +90,8 @@ typedef union {
       uint16_t addr_inc;         /* Address Increment */
       uint16_t prop_val_cnt;     /* Property Value Count (1 + number of slots) */
       uint8_t  prop_val[513];    /* Property Values (DMX start code + slots data) */
-    } __attribute__((packed)) dmp;
-  } __attribute__((packed));
+    }) dmp;
+  });
 
   uint8_t raw[638]; /* raw buffer view: 638 bytes */
 } e131_packet_t;
