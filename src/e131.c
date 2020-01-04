@@ -24,9 +24,16 @@
 #include <string.h>
 #include <errno.h>
 #include <inttypes.h>
+
+#ifdef _WIN32
+#include <WinSock2.h>
+#include <ws2ipdef.h>
+#else
 #include <netdb.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#endif
+
 #include "e131.h"
 
 /* E1.31 Public Constants */
@@ -46,6 +53,10 @@ const uint16_t _E131_DMP_ADDR_INC = 0x0001;
 
 /* Create a socket file descriptor suitable for E1.31 communication */
 int e131_socket(void) {
+#ifdef _WIN32
+  WSADATA WsaData;
+  WSAStartup(MAKEWORD(2, 2), &WsaData);
+#endif
   return socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 
@@ -106,10 +117,16 @@ int e131_multicast_join(int sockfd, const uint16_t universe) {
     errno = EINVAL;
     return -1;
   }
+#ifdef _WIN32
+  struct ip_mreq mreq;
+  mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
+  mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+#else
   struct ip_mreqn mreq;
   mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
   mreq.imr_address.s_addr = htonl(INADDR_ANY);
   mreq.imr_ifindex = 0;
+#endif
   return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
 }
 
