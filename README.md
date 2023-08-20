@@ -1,55 +1,52 @@
 # libE131: a lightweight C/C++ library for the E1.31 (sACN) protocol
 
-This is a lightweight C/C++ library that provides a simple API for packet, client and server programming to be used for communicating with devices implementing the E1.31 (sACN) protocol. Detailed information about E.131 (sACN) can be found on this [Wiki article][e131], from which most informational content about E1.31 in this document comes from.
+This is a lightweight C/C++ library that provides a simple API for packet, client and server programming to be used for communicating with devices implementing the E1.31 (sACN) protocol. Detailed information about E.131 (sACN) can be found on this [Wiki article](https://www.doityourselfchristmas.com/wiki/index.php?title=E1.31_%28Streaming-ACN%29_Protocol) from which most informational content about E1.31 in this document comes from.
 
 ACN is a suite of protocols (via Ethernet) that is the industry standard for lighting and control. ESTA, the creator of the standard, ratified a subset of this protocol for "lightweight" devices which is called sACN (E1.31). This lightweight version allows microcontroller based lighting equipment to communicate via ethernet, without all the overhead of the full ACN protocol.
 
 The simplest way to think about E1.31 is that it is a way to transport a large number of lighting control channels over a traditional ethernet network connection. E1.31 transports those channels in "Universes", which is a collection of up to 512 channels together. E.131 is ethernet based and is the data sent via UDP. The two accepted transport methods are multicast and unicast, the most common implementation is multicast. When using multicast all the controller needs to do is subscribe to the multicast address for the universe that you want to receive data from.
 
-[e131]: http://www.doityourselfchristmas.com/wiki/index.php?title=E1.31_(Streaming-ACN)_Protocol
-
 ## Installation
 
-To install libE131 in your system, download the [latest release archive][releases] and use the standard autotools approach:
-
-    $ ./configure --prefix=/usr
-    $ make
-    $ sudo make install
+To install libE131 in your system, download the [latest release archive](https://github.com/hhromic/libe131/releases/latest) and use the standard autotools approach:
+```
+./configure --prefix=/usr \
+&& make \
+&& sudo make install
+```
 
 The last step requires `root` privileges. You can uninstall the library using:
-
-    $ sudo make uninstall
+```
+sudo make uninstall
+```
     
-A development package is also available on the [AUR][aur-link].
-
-[releases]: https://github.com/hhromic/libe131/releases/latest
-[aur-link]: https://aur.archlinux.org/packages/libe131-git/
+A development package for Arch Linux is also available on the [AUR](https://aur.archlinux.org/packages/libe131-git/).
 
 ## E1.31 (sACN) Packets
 
 E1.31 network packets are based on ACN and are composed of three layers:
-
-    E1.31 Packet = ACN Root Layer + Framing Layer + Device Management Protocol (DMP) Layer
+```
+E1.31 Packet = ACN Root Layer + Framing Layer + Device Management Protocol (DMP) Layer
+```
 
 All packet contents are transmitted in **network byte order (big endian)**. If you are accessing fields larger than one byte, you must read/write from/to them using the `ntohs`, `ntohl`, `htons` and `htonl` conversion functions.
 
 Fortunately, most of the time you will not need to manipulate those fields directly because libE131 provides convenience functions for the most common fields. See the API documentation section for more information.
 
-The following is the data union provided by libE131 for sending/receiving E1.31 packets:
-
-```
+The following is the `e131_packet_t` type union provided by libE131 for sending/receiving E1.31 packets:
+```c
 typedef union {
-  struct {
-    struct { /* ACN Root Layer: 38 bytes */
+  PACK(struct {
+    PACK(struct { /* ACN Root Layer: 38 bytes */
       uint16_t preamble_size;    /* Preamble Size */
       uint16_t postamble_size;   /* Post-amble Size */
       uint8_t  acn_pid[12];      /* ACN Packet Identifier */
       uint16_t flength;          /* Flags (high 4 bits) & Length (low 12 bits) */
       uint32_t vector;           /* Layer Vector */
       uint8_t  cid[16];          /* Component Identifier (UUID) */
-    } __attribute__((packed)) root;
+    }) root;
 
-    struct { /* Framing Layer: 77 bytes */
+    PACK(struct { /* Framing Layer: 77 bytes */
       uint16_t flength;          /* Flags (high 4 bits) & Length (low 12 bits) */
       uint32_t vector;           /* Layer Vector */
       uint8_t  source_name[64];  /* User Assigned Name of Source (UTF-8) */
@@ -58,9 +55,9 @@ typedef union {
       uint8_t  seq_number;       /* Sequence Number (detect duplicates or out of order packets) */
       uint8_t  options;          /* Options Flags (bit 7: preview data, bit 6: stream terminated) */
       uint16_t universe;         /* DMX Universe Number */
-    } __attribute__((packed)) frame;
+    }) frame;
 
-    struct { /* Device Management Protocol (DMP) Layer: 523 bytes */
+    PACK(struct { /* Device Management Protocol (DMP) Layer: 523 bytes */
       uint16_t flength;          /* Flags (high 4 bits) / Length (low 12 bits) */
       uint8_t  vector;           /* Layer Vector */
       uint8_t  type;             /* Address Type & Data Type */
@@ -68,8 +65,8 @@ typedef union {
       uint16_t addr_inc;         /* Address Increment */
       uint16_t prop_val_cnt;     /* Property Value Count (1 + number of slots) */
       uint8_t  prop_val[513];    /* Property Values (DMX start code + slots data) */
-    } __attribute__((packed)) dmp;
-  } __attribute__((packed));
+    }) dmp;
+  });
 
   uint8_t raw[638]; /* raw buffer view: 638 bytes */
 } e131_packet_t;
@@ -77,40 +74,44 @@ typedef union {
 
 This union provides two ways to access the data of an E1.31 packet:
 
-1. directly using the `raw` member (typically used for receiving data from the network)
-2. structurally using the `root`, `frame` and `dmp` members (typically for processing a packet)
+1. Directly using the `raw` member (typically used for receiving data from the network).
+2. Structurally using the `root`, `frame` and `dmp` members (typically used for processing a packet).
 
 You can easily create and initialize a new E1.31 packet to be used for sending using the `e131_pkt_init()` function.
 
-See the examples sections to see how this data structure is used with libE131.
+Refer to the [examples](#examples) section for how to use this data structure with libE131.
 
 ### Framing Layer Options
 
-The library provides two convenience functions, `e131_get_option()` and `e131_set_option()` to manipulate the options flag in the Framing Layer of an E1.31 packet. The following is a description of the supported option constants:
+The library provides two convenience functions, `e131_get_option()` and `e131_set_option()` to manipulate the options flag in the Framing Layer of an E1.31 packet. The following table describes the available option constants:
 
-* `E131_OPT_TERMINATED`: the current packet is the last one in the stream. The receiver should stop processing further packets.
-* `E131_OPT_PREVIEW`: the data in the packet should be only used for preview purposes, e.g. console display, and not to drive live fixtures.
+| Option Constant | Description |
+|:----------------|:------------|
+| `E131_OPT_TERMINATED` | The current packet is the last one in the stream. The receiver should stop processing further packets. |
+| `E131_OPT_PREVIEW` | The data in the packet should be only used for preview purposes, e.g. console display, and not to drive live fixtures. |
 
-See the examples sections to see how Framing Layer options are used with libE131.
+Refer to the [examples](#examples) section for how to use Framing Layer options with libE131.
 
 ### Packet Validation
 
-The library provides a convenience function, `e131_pkt_validate()`, to check if an E1.31 packet is valid to be processed by your application. This function returns a validation status from the `e131_error_t` enumeration. The following is a description of each available error constant:
+The library provides a convenience function, `e131_pkt_validate()`, to check if an E1.31 packet is valid to be processed by your application. This function returns a validation status from the `e131_error_t` enumeration. The following table describes the available error constants:
 
-* `E131_ERR_NONE`: Success (no validation error detected, you can process the packet).
-* `E131_ERR_PREAMBLE_SIZE`: Invalid Preamble Size.
-* `E131_ERR_POSTAMBLE_SIZE`: Invalid Post-amble Size.
-* `E131_ERR_ACN_PID`: Invalid ACN Packet Identifier.
-* `E131_ERR_VECTOR_ROOT`: Invalid Root Layer Vector.
-* `E131_ERR_VECTOR_FRAME`: Invalid Framing Layer Vector.
-* `E131_ERR_VECTOR_DMP`: Invalid Device Management Protocol (DMP) Layer Vector.
-* `E131_ERR_TYPE_DMP`: Invalid DMP Address & Data Type.
-* `E131_ERR_FIRST_ADDR_DMP`: Invalid DMP First Address.
-* `E131_ERR_ADDR_INC_DMP`: Invalid DMP Address Increment.
+| Error Constant | Description |
+|:---------------|:------------|
+| `E131_ERR_NONE` | Success (no validation error detected, you can process the packet). |
+| `E131_ERR_PREAMBLE_SIZE` | Invalid Preamble Size. |
+| `E131_ERR_POSTAMBLE_SIZE` | Invalid Post-amble Size. |
+| `E131_ERR_ACN_PID` | Invalid ACN Packet Identifier. |
+| `E131_ERR_VECTOR_ROOT` | Invalid Root Layer Vector. |
+| `E131_ERR_VECTOR_FRAME` | Invalid Framing Layer Vector. |
+| `E131_ERR_VECTOR_DMP` | Invalid Device Management Protocol (DMP) Layer Vector. |
+| `E131_ERR_TYPE_DMP` | Invalid DMP Address & Data Type. |
+| `E131_ERR_FIRST_ADDR_DMP` | Invalid DMP First Address. |
+| `E131_ERR_ADDR_INC_DMP` | Invalid DMP Address Increment. |
 
-The above error descriptions are also programatically obtainable using the `e131_strerror()` function. See the API documentation section for more information.
+The above error descriptions are also programatically obtainable using the `e131_strerror()` function. Refer to the [API documentation](#api-documentation) section for more information.
 
-See the examples sections to see how the packet validation and error reporting functions are used with libE131.
+Refer to the [examples](#examples) section for how to use packet validation and error reporting with libE131.
 
 ## Unicast and Multicast Destinations
 
@@ -118,9 +119,14 @@ Most E1.31 software and hardware can be set up to communicate via two transport 
 
 ### Unicast Transmission
 
-Unicast is a method of sending data across a network where two devices, the control PC and the lighting controller, are directly connected (or thru a network switch or router) and the channel control information meant for that specific controller is only sent to that controller. Unicast is a **point to point protocol** and the lighting channel information is only switched or routed to the device with the matching IP address.
+Unicast is a method of sending data across a network where two devices, the control PC and the lighting controller, are directly connected (or through a network switch or router) and the channel control information meant for that specific controller is only sent to that controller. Unicast is a **point to point protocol** and the lighting channel information is only switched or routed to the device with the matching IP address.
 
 You must have unique IP address in each controller. Using Unicast the data packets are sent directly to the device instead of being broadcast across the entire subnet.
+
+In unicast transmission:
+
+* More channels of data are allowed to controllers and bridges (commonly 12 Universes vs. 7 for Multicast).
+* Channels can only be sent to one controller per Universe.
 
 ### Multicast Transmission
 
@@ -132,24 +138,17 @@ Depending on the device and the number of universes of data sent it can swamp th
 
 The data is received on multicast IP address not on the individual device IP address.
 
-### Unicast vs. Multicast
+In multicast transmission:
 
-**Unicast:**
-
-* Allows more channels of data to controllers and bridges (commonly 12 Universes vs. 7 Universes for Multicast)
-* Channels can only be sent to one controller per Universe
-
-**Multicast:**
-
-* Allows less channels of data to controllers and bridges (commonly 7 Universes vs. 12 for Unicast)
-* Simpler network configuration since controllers don't need data address information
+* Less channels of data are allowed to controllers and bridges (commonly 7 Universes vs. 12 for Unicast).
+* Simpler network configuration since controllers don't need data address information.
 * Channels can be mirrored on multiple controllers since the same Universe can be used by multiple controllers.
 
 ## E1.31 (sACN) Universes
 
 E1.31 transports lighting information in "Universes", which is a collection of up to 512 channels together. You can chose any universe number from **1-63999** and assign it to a block of channels in your sequencing software. While a Universe can contain up to 512 channels, it does not have to, and can be any number between 1-512 channels.
 
-## libE131 API Documentation
+## API Documentation
 
 ### Public Library Constants
 
@@ -194,45 +193,42 @@ See the examples sections to see how the most common API functions are used with
 
 * `const char *e131_strerror(const e131_error_t error)`: Return a string describing an E1.31 error.
 
-## Example: Creating a Client
+## Examples
 
-Included in this repository is an example to create a simple E1.31 client (`examples/test_client.c`). Compile it using:
+The [`examples/test_client.c`](examples/test_client.c) example demonstrates how to create a simple E1.31 client. To compile it:
+```
+gcc -Wall test_client.c -o test_client -le131
+```
 
-    gcc -Wall test_client.c -o test_client -le131
+The [`examples/test_server.c`](examples/test_server.c) example demonstrates how to create a simple E1.31 server. To compile it:
+```
+gcc -Wall test_server.c -o test_server -le131
+```
 
-## Example: Creating a Server
+## Projects using libE131
 
-Included in this repository is an example to create a simple E1.31 server (`examples/test_server.c`). Compile it using:
+The following projects use libE131:
 
-    gcc -Wall test_server.c -o test_server -le131
+* [E1.31 Xterm256 Console Viewer](https://github.com/hhromic/e131-viewer)
+* [E1.31 to AdaLight Bridge](https://github.com/hhromic/e131-adalight-bridge)
+* [E1.31 to MQTT Bridge](https://github.com/hhromic/e131-mqtt-bridge)
+* [MIDI to E1.31 Light Synthesizer](https://github.com/hhromic/midi-e131-synth)
 
-## Example Projects using libE131
-
-* [E1.31 Xterm256 Console Viewer][e131-viewer]
-* [E1.31 to AdaLight Bridge][e131-adalight-bridge]
-* [E1.31 to MQTT Bridge][e131-mqtt-bridge]
-* [MIDI to E1.31 Synthesizer][midi-e131-synth]
-
-Also check out the [Node.js port][e131-node] of libE131.
-
-[e131-viewer]: https://github.com/hhromic/e131-viewer
-[e131-adalight-bridge]: https://github.com/hhromic/e131-adalight-bridge
-[e131-mqtt-bridge]: https://github.com/hhromic/e131-mqtt-bridge
-[midi-e131-synth]: https://github.com/hhromic/midi-e131-synth
-[e131-node]: https://github.com/hhromic/e131-node
+Also check out the [Node.js port](https://github.com/hhromic/e131-node) of libE131.
 
 ## License
 
 This software is under the **Apache License 2.0**.
+```
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
 
-        http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
