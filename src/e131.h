@@ -32,10 +32,10 @@ extern "C" {
 #include <stdbool.h>
 #include <sys/types.h>
 
-#ifndef _WIN32
-#include <netinet/in.h>
-#else
+#ifdef _WIN32
 #include <WinSock2.h>
+#else
+#include <netinet/in.h>
 #endif
 
 #ifdef __GNUC__
@@ -46,7 +46,7 @@ extern "C" {
 #define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
 #endif
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 #endif
