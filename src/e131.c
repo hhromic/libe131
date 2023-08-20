@@ -76,15 +76,28 @@ int e131_unicast_dest(e131_addr_t *dest, const char *host, const uint16_t port) 
     errno = EINVAL;
     return -1;
   }
-  struct hostent *he = gethostbyname(host);
-  if (he == NULL) {
+
+  // get the address info of the host (the results are a linked list)
+  struct addrinfo *ai, *ait, hints;
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_INET;
+  if (getaddrinfo(host, NULL, &hints, &ai) != 0) {
     errno = EADDRNOTAVAIL;
     return -1;
   }
-  dest->sin_family = AF_INET;
-  dest->sin_addr = *(struct in_addr *)he->h_addr;
-  dest->sin_port = htons(port);
-  memset(dest->sin_zero, 0, sizeof dest->sin_zero);
+
+  // iterate over the address info results, but only use the first result
+  bool first = true;
+  for (ait = ai; ait != NULL; ait = ai->ai_next) {
+    if (first) {
+      dest->sin_family = AF_INET;
+      dest->sin_addr = ((struct sockaddr_in *)ai->ai_addr)->sin_addr;
+      dest->sin_port = htons(port);
+      memset(dest->sin_zero, 0, sizeof dest->sin_zero);
+      first = false;
+    }
+    freeaddrinfo(ai);
+  }
   return 0;
 }
 
