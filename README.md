@@ -185,7 +185,7 @@ See the examples sections to see how the most common API functions are used with
 
 * `ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *dest)`: Send an E1.31 packet to a socket file descriptor using a destination. On success, the number of bytes sent is returned. On error, -1 is returned, and `errno` is set appropriately.
 
-* `ssize_t e131_recv(int sockfd, e131_packet_t *packet)`: Receive an E1.31 packet from a socket file descriptor. This function returns the number of bytes received, or -1 if an error occurred. In the event of an error, `errno` is set to indicate the error.
+* `ssize_t e131_recv(int sockfd, e131_packet_t *packet)`: Receive an E1.31 packet from a socket file descriptor. This function returns the number of bytes received, or -1 if an error occurred. On error, `errno` is set appropriately.
 
 * `e131_error_t e131_pkt_validate(const e131_packet_t *packet)`: Validate that an E1.31 packet is well-formed. See the Packet Validation section.
 
