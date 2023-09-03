@@ -171,7 +171,11 @@ See the examples sections to see how the most common API functions are used with
 
 * `int e131_dest_str(char *str, const e131_addr_t *dest)`: Describe an E1.31 destination into a string (must be at least 22 bytes). On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
-* `int e131_multicast_join(int sockfd, const uint16_t universe)`: Join a socket file descriptor to an E1.31 multicast group using a universe. On success, zero is returned.  On error, -1 is returned, and `errno` is set appropriately.
+* `int e131_multicast_iface(int sockfd, const int ifindex)`: Configure a socket file descriptor to use a specific network interface for outgoing multicast data. Interface index zero is the system default interface. On error, -1 is returned, and `errno` is set appropriately.
+
+* `int e131_multicast_join(int sockfd, const uint16_t universe)`: Join a socket file descriptor to an E1.31 multicast group using a universe. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
+
+* `int e131_multicast_join_iface(int sockfd, const uint16_t universe, const int ifindex)`: Join a socket file descriptor to an E1.31 multicast group using a universe and a specific network interface. On error, -1 is returned, and `errno` is set appropriately.
 
 * `int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t num_slots)`:  Initialize an E1.31 packet using a universe and a number of slots. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 

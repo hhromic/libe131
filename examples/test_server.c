@@ -14,11 +14,13 @@ int main() {
   if ((sockfd = e131_socket()) < 0)
     err(EXIT_FAILURE, "e131_socket");
 
-  // bind the socket to the default E1.31 port and join multicast group for universe 1
+  // bind the socket to the default E1.31 port
   if (e131_bind(sockfd, E131_DEFAULT_PORT) < 0)
     err(EXIT_FAILURE, "e131_bind");
-  if (e131_multicast_join(sockfd, 1) < 0)
-    err(EXIT_FAILURE, "e131_multicast_join");
+
+  // join the socket to multicast group for universe 1 on the default network interface
+  if (e131_multicast_join_iface(sockfd, 1, 0) < 0)
+    err(EXIT_FAILURE, "e131_multicast_join_iface");
 
   // loop to receive E1.31 packets
   fprintf(stderr, "waiting for E1.31 packets ...\n");

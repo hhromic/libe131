@@ -14,6 +14,10 @@ int main() {
   if ((sockfd = e131_socket()) < 0)
     err(EXIT_FAILURE, "e131_socket");
 
+  // configure socket to use the default network interface for outgoing multicast data
+  if (e131_multicast_iface(sockfd, 0) < 0)
+    err(EXIT_FAILURE, "e131_multicast_iface");
+
   // initialize the new E1.31 packet in universe 1 with 24 slots in preview mode
   e131_pkt_init(&packet, 1, 24);
   memcpy(&packet.frame.source_name, "E1.31 Test Client", 18);
