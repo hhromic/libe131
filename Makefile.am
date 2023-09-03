@@ -1,4 +1,4 @@
-AM_CFLAGS = -Wall -O3 -std=gnu11 -pedantic
+AM_CFLAGS = -Wall -Werror -std=gnu11 -pedantic
 ACLOCAL_AMFLAGS = -I m4
 
 dist_doc_DATA = LICENSE README.md
