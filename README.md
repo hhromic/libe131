@@ -177,6 +177,8 @@ See the examples sections to see how the most common API functions are used with
 
 * `int e131_multicast_join_iface(int sockfd, const uint16_t universe, const int ifindex)`: Join a socket file descriptor to an E1.31 multicast group using a universe and a specific network interface. On error, -1 is returned, and `errno` is set appropriately.
 
+* `int e131_multicast_join_ifaddr(int sockfd, const uint16_t universe, const char *ifaddr)`: Join a socket file descriptor to an E1.31 multicast group using a universe and an IP address to bind to. On error, -1 is returned, and `errno` is set appropriately.
+
 * `int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t num_slots)`:  Initialize an E1.31 packet using a universe and a number of slots. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
 * `bool e131_get_option(const e131_packet_t *packet, const e131_option_t option)`: Get the state of a framing option in an E1.31 packet.
