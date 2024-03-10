@@ -166,24 +166,26 @@ int e131_multicast_join_iface(int sockfd, const uint16_t universe, const int ifi
 
 /* Join a socket file descriptor to an E1.31 multicast group using a universe and an IP address to bind to */
 extern int e131_multicast_join_ifaddr(int sockfd, const uint16_t universe, const char *ifaddr) {
-    if (universe < 1 || universe > 63999) {
-        errno = EINVAL;
-        return -1;
-    }
+  if (universe < 1 || universe > 63999) {
+    errno = EINVAL;
+    return -1;
+  }
 #ifdef _WIN32
-    if (ifindex != 0) {
+  if (ifindex != 0) {
     errno = ENOSYS;
     return -1;
   }
   struct ip_mreq mreq;
   mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
   mreq.imr_interface.s_addr = inet_addr(ifaddr);
+  mreq.imr_ifindex = 0;
 #else
-    struct ip_mreqn mreq;
-    mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
-    mreq.imr_address.s_addr = inet_addr(ifaddr);
+  struct ip_mreqn mreq;
+  mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
+  mreq.imr_address.s_addr = inet_addr(ifaddr);
+  mreq.imr_ifindex = 0;
 #endif
-    return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
+  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
 }
 
 /* Initialize an E1.31 packet using a universe and a number of slots */
