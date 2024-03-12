@@ -171,10 +171,6 @@ extern int e131_multicast_join_ifaddr(int sockfd, const uint16_t universe, const
     return -1;
   }
 #ifdef _WIN32
-  if (ifindex != 0) {
-    errno = ENOSYS;
-    return -1;
-  }
   struct ip_mreq mreq;
   mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
   mreq.imr_interface.s_addr = inet_addr(ifaddr);
