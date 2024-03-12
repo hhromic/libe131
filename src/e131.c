@@ -178,7 +178,6 @@ extern int e131_multicast_join_ifaddr(int sockfd, const uint16_t universe, const
   struct ip_mreq mreq;
   mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
   mreq.imr_interface.s_addr = inet_addr(ifaddr);
-  mreq.imr_ifindex = 0;
 #else
   struct ip_mreqn mreq;
   mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
