@@ -164,6 +164,25 @@ int e131_multicast_join_iface(int sockfd, const uint16_t universe, const int ifi
   return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
 }
 
+/* Join a socket file descriptor to an E1.31 multicast group using a universe and an IP address to bind to */
+extern int e131_multicast_join_ifaddr(int sockfd, const uint16_t universe, const char *ifaddr) {
+  if (universe < 1 || universe > 63999) {
+    errno = EINVAL;
+    return -1;
+  }
+#ifdef _WIN32
+  struct ip_mreq mreq;
+  mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
+  mreq.imr_interface.s_addr = inet_addr(ifaddr);
+#else
+  struct ip_mreqn mreq;
+  mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
+  mreq.imr_address.s_addr = inet_addr(ifaddr);
+  mreq.imr_ifindex = 0;
+#endif
+  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
+}
+
 /* Initialize an E1.31 packet using a universe and a number of slots */
 int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t num_slots) {
   if (packet == NULL || universe < 1 || universe > 63999 || num_slots < 1 || num_slots > 512) {
