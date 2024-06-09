@@ -1,12 +1,12 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.71])
 AC_INIT([libe131], [1.4.0], [hhromic@gmail.com])
-AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 LT_INIT
-AC_CONFIG_SRCDIR([src/e131.h])
+AC_CONFIG_SRCDIR([src/e131.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])
 
@@ -34,7 +34,7 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT8_T
 
 # Checks for library functions.
-AC_CHECK_FUNCS([gethostbyname memset socket])
+AC_CHECK_FUNCS([getaddrinfo inet_ntoa memset socket])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

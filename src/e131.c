@@ -76,15 +76,23 @@ int e131_unicast_dest(e131_addr_t *dest, const char *host, const uint16_t port) 
     errno = EINVAL;
     return -1;
   }
-  struct hostent *he = gethostbyname(host);
-  if (he == NULL) {
+
+  // get the address info of the host (the results are a linked list)
+  struct addrinfo *ai, hints;
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_INET;
+  if (getaddrinfo(host, NULL, &hints, &ai) != 0) {
     errno = EADDRNOTAVAIL;
     return -1;
   }
+
+  // for now, only use the first address info result
   dest->sin_family = AF_INET;
-  dest->sin_addr = *(struct in_addr *)he->h_addr;
+  dest->sin_addr = ((struct sockaddr_in *)ai->ai_addr)->sin_addr;
   dest->sin_port = htons(port);
   memset(dest->sin_zero, 0, sizeof dest->sin_zero);
+
+  freeaddrinfo(ai);
   return 0;
 }
 
@@ -111,13 +119,39 @@ int e131_dest_str(char *str, const e131_addr_t *dest) {
   return 0;
 }
 
+/* Configure a socket file descriptor to use a specific network interface for outgoing multicast data */
+int e131_multicast_iface(int sockfd, const int ifindex) {
+#ifdef _WIN32
+  if (ifindex != 0) {
+    errno = ENOSYS;
+    return -1;
+  }
+  struct ip_mreq mreq;
+  mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+#else
+  struct ip_mreqn mreq;
+  mreq.imr_address.s_addr = htonl(INADDR_ANY);
+  mreq.imr_ifindex = ifindex;
+#endif
+  return setsockopt(sockfd, IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof mreq);
+}
+
 /* Join a socket file descriptor to an E1.31 multicast group using a universe */
 int e131_multicast_join(int sockfd, const uint16_t universe) {
+  return e131_multicast_join_iface(sockfd, universe, 0);
+}
+
+/* Join a socket file descriptor to an E1.31 multicast group using a universe and a specific network interface */
+int e131_multicast_join_iface(int sockfd, const uint16_t universe, const int ifindex) {
   if (universe < 1 || universe > 63999) {
     errno = EINVAL;
     return -1;
   }
 #ifdef _WIN32
+  if (ifindex != 0) {
+    errno = ENOSYS;
+    return -1;
+  }
   struct ip_mreq mreq;
   mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
   mreq.imr_interface.s_addr = htonl(INADDR_ANY);
@@ -125,6 +159,25 @@ int e131_multicast_join(int sockfd, const uint16_t universe) {
   struct ip_mreqn mreq;
   mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
   mreq.imr_address.s_addr = htonl(INADDR_ANY);
+  mreq.imr_ifindex = ifindex;
+#endif
+  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
+}
+
+/* Join a socket file descriptor to an E1.31 multicast group using a universe and an IP address to bind to */
+extern int e131_multicast_join_ifaddr(int sockfd, const uint16_t universe, const char *ifaddr) {
+  if (universe < 1 || universe > 63999) {
+    errno = EINVAL;
+    return -1;
+  }
+#ifdef _WIN32
+  struct ip_mreq mreq;
+  mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
+  mreq.imr_interface.s_addr = inet_addr(ifaddr);
+#else
+  struct ip_mreqn mreq;
+  mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
+  mreq.imr_address.s_addr = inet_addr(ifaddr);
   mreq.imr_ifindex = 0;
 #endif
   return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
