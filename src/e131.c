@@ -26,7 +26,8 @@
 #include <inttypes.h>
 
 #ifdef _WIN32
-#include <WinSock2.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <ws2ipdef.h>
 #else
 #include <netdb.h>
@@ -133,7 +134,7 @@ int e131_multicast_iface(int sockfd, const int ifindex) {
   mreq.imr_address.s_addr = htonl(INADDR_ANY);
   mreq.imr_ifindex = ifindex;
 #endif
-  return setsockopt(sockfd, IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof mreq);
+  return setsockopt(sockfd, IPPROTO_IP, IP_MULTICAST_IF, (const void *) &mreq, sizeof mreq);
 }
 
 /* Join a socket file descriptor to an E1.31 multicast group using a universe */
@@ -161,7 +162,7 @@ int e131_multicast_join_iface(int sockfd, const uint16_t universe, const int ifi
   mreq.imr_address.s_addr = htonl(INADDR_ANY);
   mreq.imr_ifindex = ifindex;
 #endif
-  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
+  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const void *) &mreq, sizeof mreq);
 }
 
 /* Join a socket file descriptor to an E1.31 multicast group using a universe and an IP address to bind to */
@@ -180,7 +181,7 @@ extern int e131_multicast_join_ifaddr(int sockfd, const uint16_t universe, const
   mreq.imr_address.s_addr = inet_addr(ifaddr);
   mreq.imr_ifindex = 0;
 #endif
-  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof mreq);
+  return setsockopt(sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (const void *) &mreq, sizeof mreq);
 }
 
 /* Initialize an E1.31 packet using a universe and a number of slots */
@@ -250,7 +251,7 @@ ssize_t e131_send(int sockfd, const e131_packet_t *packet, const e131_addr_t *de
   }
   const size_t packet_length = sizeof packet->raw -
     sizeof packet->dmp.prop_val + htons(packet->dmp.prop_val_cnt);
-  return sendto(sockfd, packet->raw, packet_length, 0,
+  return sendto(sockfd, (const void *) packet->raw, packet_length, 0,
     (const struct sockaddr *)dest, sizeof *dest);
 }
 
@@ -260,7 +261,7 @@ ssize_t e131_recv(int sockfd, e131_packet_t *packet) {
     errno = EINVAL;
     return -1;
   }
-  return recv(sockfd, packet->raw, sizeof packet->raw, 0);
+  return recv(sockfd, (void *) packet->raw, sizeof packet->raw, 0);
 }
 
 /* Validate that an E1.31 packet is well-formed */
@@ -309,14 +310,22 @@ int e131_pkt_dump(FILE *stream, const e131_packet_t *packet) {
   fprintf(stream, "  Post-amble Size ........ %" PRIu16 "\n", ntohs(packet->root.postamble_size));
   fprintf(stream, "  ACN Packet Identifier .. %s\n", packet->root.acn_pid);
   fprintf(stream, "  Flags & Length ......... %" PRIu16 "\n", ntohs(packet->root.flength));
+#ifdef _WIN32
+  fprintf(stream, "  Layer Vector ........... %lu\n", ntohl(packet->root.vector));
+#else
   fprintf(stream, "  Layer Vector ........... %" PRIu32 "\n", ntohl(packet->root.vector));
+#endif
   fprintf(stream, "  Component Identifier ... ");
   for (size_t pos=0, total=sizeof packet->root.cid; pos<total; pos++)
     fprintf(stream, "%02x", packet->root.cid[pos]);
   fprintf(stream, "\n");
   fprintf(stream, "[Framing Layer]\n");
   fprintf(stream, "  Flags & Length ......... %" PRIu16 "\n", ntohs(packet->frame.flength));
+#ifdef _WIN32
+  fprintf(stream, "  Layer Vector ........... %lu\n", ntohl(packet->frame.vector));
+#else
   fprintf(stream, "  Layer Vector ........... %" PRIu32 "\n", ntohl(packet->frame.vector));
+#endif
   fprintf(stream, "  Source Name ............ %s\n", packet->frame.source_name);
   fprintf(stream, "  Packet Priority ........ %" PRIu8 "\n", packet->frame.priority);
   fprintf(stream, "  Reserved ............... %" PRIu16 "\n", ntohs(packet->frame.reserved));
