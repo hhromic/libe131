@@ -8,7 +8,20 @@ The simplest way to think about E1.31 is that it is a way to transport a large n
 
 ## Installation
 
-To install libE131 in your system, download the [latest release archive](https://github.com/hhromic/libe131/releases/latest) and use the standard autotools approach:
+### CMake
+
+To install libE131 in your system, download the source code and use the standard CMake approach:
+```
+cmake -DCMAKE_PREFIX_PATH=/usr . \
+&& cmake --build . \
+&& sudo make install
+```
+
+The last step requires `root` privileges.
+
+### Autotools
+
+To install libE131 in your system, download the the source code and use the standard autotools approach:
 ```
 ./configure --prefix=/usr \
 && make \
@@ -19,7 +32,7 @@ The last step requires `root` privileges. You can uninstall the library using:
 ```
 sudo make uninstall
 ```
-    
+
 A development package for Arch Linux is also available on the [AUR](https://aur.archlinux.org/packages/libe131-git/).
 
 ## E1.31 (sACN) Packets
