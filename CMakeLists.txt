@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(libe131 C)
+project(e131 C)
 
 set (SOURCE_FILES 
   src/e131.c
