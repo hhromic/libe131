@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(e131 C)
+project(libe131 C)
 
 set (SOURCE_FILES 
   src/e131.c
@@ -12,6 +12,7 @@ add_library(${PROJECT_NAME} STATIC
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 
 target_include_directories(${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
