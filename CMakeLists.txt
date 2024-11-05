@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
-
 project(libe131 C)
+
+OPTION( SKIP_EXAMPLES "Skip Examples" OFF )
 
 set (SOURCE_FILES 
   src/e131.c
@@ -18,6 +19,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
         $<INSTALL_INTERFACE:include>
 )
+
+if (NOT SKIP_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 #####################################
 # Install
