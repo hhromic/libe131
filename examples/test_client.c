@@ -40,4 +40,6 @@ int main() {
     packet.frame.seq_number++;
     usleep(250000);
   }
+
+  e131_socket_close(sockfd);
 }
