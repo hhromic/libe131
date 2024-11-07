@@ -30,6 +30,7 @@
 #include <ws2tcpip.h>
 #include <ws2ipdef.h>
 #else
+#include <unistd.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
