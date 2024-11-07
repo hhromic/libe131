@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <err.h>
 #include <e131.h>
+
+#include "error.h"
 
 int main() {
   int sockfd;
