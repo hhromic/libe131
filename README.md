@@ -176,6 +176,8 @@ See the examples sections to see how the most common API functions are used with
 
 * `int e131_socket(void)`: Create a socket file descriptor suitable for E1.31 communication. On success, a file descriptor for the new socket is returned. On error, -1 is returned, and `errno` is set appropriately.
 
+* `void e131_socket_close(int sockfd)`: Close a socket file descriptor suitable for E1.31 communication.
+
 * `int e131_bind(int sockfd, const uint16_t port)`: Bind a socket file descriptor to a port number for E1.31 communication. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
 * `int e131_unicast_dest(e131_addr_t *dest, const char *host, const uint16_t port)`: Initialize a unicast E1.31 destination using a host and port number. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.

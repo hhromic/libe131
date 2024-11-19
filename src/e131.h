@@ -120,6 +120,9 @@ typedef enum {
 /* Create a socket file descriptor suitable for E1.31 communication */
 extern int e131_socket(void);
 
+/* Close a socket file descriptor suitable for E1.31 communication */
+extern void e131_socket_close(int sockfd);
+
 /* Bind a socket file descriptor to a port number for E1.31 communication */
 extern int e131_bind(int sockfd, const uint16_t port);
 

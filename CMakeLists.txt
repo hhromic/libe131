@@ -12,6 +12,7 @@ add_library(${PROJECT_NAME} STATIC
         ${SOURCE_FILES} 
 )
 
+target_compile_features(${PROJECT_NAME} PUBLIC c_std_99)
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 

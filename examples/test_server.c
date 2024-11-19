@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <err.h>
 #include <e131.h>
+
+#include "error.h"
 
 int main() {
   int sockfd;
@@ -39,4 +40,6 @@ int main() {
     e131_pkt_dump(stderr, &packet);
     last_seq = packet.frame.seq_number;
   }
+
+  e131_socket_close(sockfd);
 }

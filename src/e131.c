@@ -30,6 +30,7 @@
 #include <ws2tcpip.h>
 #include <ws2ipdef.h>
 #else
+#include <unistd.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -59,6 +60,17 @@ int e131_socket(void) {
   WSAStartup(MAKEWORD(2, 2), &WsaData);
 #endif
   return socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+}
+
+/* Close a socket file descriptor suitable for E1.31 communication */
+void e131_socket_close(int sockfd)
+{
+#ifdef _WIN32
+  closesocket(sockfd);
+  WSACleanup();
+#else
+  close(sockfd);
+#endif
 }
 
 /* Bind a socket file descriptor to a port number for E1.31 communication */

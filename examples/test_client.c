@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <err.h>
 #include <e131.h>
+
+#include "error.h"
+#include "sleep.h"
+
 
 int main() {
   int sockfd;
@@ -40,4 +42,6 @@ int main() {
     packet.frame.seq_number++;
     usleep(250000);
   }
+
+  e131_socket_close(sockfd);
 }
