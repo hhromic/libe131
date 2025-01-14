@@ -147,6 +147,12 @@ extern int e131_multicast_join_iface(int sockfd, const uint16_t universe, const 
 /* Join a socket file descriptor to an E1.31 multicast group using a universe and an IP address to bind to */
 extern int e131_multicast_join_ifaddr(int sockfd, const uint16_t universe, const char *ifaddr);
 
+/* Leave a socket file descriptor from an E1.31 multicast group using a universe */
+extern int e131_multicast_leave(int sockfd, const uint16_t universe);
+
+/* Leave a socket file descriptor from an E1.31 multicast group using a universe and an IP address */
+extern int e131_multicast_leave_ifaddr(int sockfd, const uint16_t universe, const int ifindex);
+
 /* Initialize an E1.31 packet using a universe and a number of slots */
 extern int e131_pkt_init(e131_packet_t *packet, const uint16_t universe, const uint16_t num_slots);
 
