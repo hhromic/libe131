@@ -385,3 +385,27 @@ const char *e131_strerror(const e131_error_t error) {
       return "Unknown error";
   }
 }
+
+/* Leave a socket file descriptor from an E1.31 multicast group using a universe and an IP address */
+int e131_multicast_leave_ifaddr(int sockfd, const uint16_t universe, const int ifindex) {
+  if (universe < 1 || universe > 63999) {
+    errno = EINVAL;
+    return -1;
+  }
+#ifdef _WIN32
+  struct ip_mreq mreq;
+  mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
+  mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+#else
+  struct ip_mreqn mreq;
+  mreq.imr_multiaddr.s_addr = htonl(0xefff0000 | universe);
+  mreq.imr_address.s_addr = htonl(INADDR_ANY);
+  mreq.imr_ifindex = ifindex;
+#endif
+  return setsockopt(sockfd, IPPROTO_IP, IP_DROP_MEMBERSHIP, (const void *)&mreq, sizeof mreq);
+}
+
+/* Leave a socket file descriptor from an E1.31 multicast group using a universe */
+int e131_multicast_leave(int sockfd, const uint16_t universe) {
+  return e131_multicast_leave_ifaddr( sockfd, universe, 0);
+}
