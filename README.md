@@ -8,7 +8,20 @@ The simplest way to think about E1.31 is that it is a way to transport a large n
 
 ## Installation
 
-To install libE131 in your system, download the [latest release archive](https://github.com/hhromic/libe131/releases/latest) and use the standard autotools approach:
+### CMake
+
+To install libE131 in your system, download the source code and use the standard CMake approach:
+```
+cmake -DCMAKE_PREFIX_PATH=/usr . \
+&& cmake --build . \
+&& sudo make install
+```
+
+The last step requires `root` privileges.
+
+### Autotools
+
+To install libE131 in your system, download the the source code and use the standard autotools approach:
 ```
 ./configure --prefix=/usr \
 && make \
@@ -19,7 +32,7 @@ The last step requires `root` privileges. You can uninstall the library using:
 ```
 sudo make uninstall
 ```
-    
+
 A development package for Arch Linux is also available on the [AUR](https://aur.archlinux.org/packages/libe131-git/).
 
 ## E1.31 (sACN) Packets
@@ -162,6 +175,8 @@ The library provides a number of functions to help you develop clients and serve
 See the examples sections to see how the most common API functions are used with libE131.
 
 * `int e131_socket(void)`: Create a socket file descriptor suitable for E1.31 communication. On success, a file descriptor for the new socket is returned. On error, -1 is returned, and `errno` is set appropriately.
+
+* `void e131_socket_close(int sockfd)`: Close a socket file descriptor suitable for E1.31 communication.
 
 * `int e131_bind(int sockfd, const uint16_t port)`: Bind a socket file descriptor to a port number for E1.31 communication. On success, zero is returned. On error, -1 is returned, and `errno` is set appropriately.
 
